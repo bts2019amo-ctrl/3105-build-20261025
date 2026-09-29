@@ -41,7 +41,7 @@ struct ThreeOneOSFiveApp: App {
     var body: some Scene {
         WindowGroup {
             ZStack {
-                if keySession.isAuthenticated {
+                if keySession.isAuthenticated && enrollmentGate.isEnrolled {
                     ContentView()
                         .environmentObject(appState)
                         .environmentObject(patchDraftCoordinator)
@@ -100,7 +100,7 @@ struct ThreeOneOSFiveApp: App {
             }
             .onAppear {
                 enrollmentGate.startIfNeeded()
-                if keySession.isAuthenticated && !showOnboarding {
+                if keySession.isAuthenticated && enrollmentGate.isEnrolled && !showOnboarding {
                     PatchProjectLibrary.removeObsoleteProtectedStorage()
                     patchStore.activate()
                     patchStore.startRemoteSync()
@@ -109,7 +109,7 @@ struct ThreeOneOSFiveApp: App {
                 }
             }
             .onChange(of: keySession.isAuthenticated) { authenticated in
-                if authenticated {
+                if authenticated && enrollmentGate.isEnrolled {
                     PatchProjectLibrary.removeObsoleteProtectedStorage()
                     patchStore.activate()
                     patchStore.startRemoteSync()
@@ -121,6 +121,12 @@ struct ThreeOneOSFiveApp: App {
             .onChange(of: enrollmentGate.isEnrolled) { enrolled in
                 if enrolled {
                     log("enrollment: device profile confirmed; key login unlocked")
+                    if keySession.isAuthenticated {
+                        PatchProjectLibrary.removeObsoleteProtectedStorage()
+                        patchStore.activate()
+                        patchStore.startRemoteSync()
+                        appState.detectSupport()
+                    }
                 }
             }
             .onChange(of: scenePhase) { phase in
@@ -610,7 +616,7 @@ final class DeviceEnrollmentGate: ObservableObject {
     @Published private(set) var errorMessage: String?
 
     private static let portalOrigin = URL(string: "https://externalsyst-eara5kjo.manus.space")!
-    private static let completedKey = "external-system.device-enrollment.completed"
+    private static let completedKey = "external-system.device-enrollment.completed.v2"
     private var challenge: String?
     private var hasOpenedPortal = false
     private var pollingTask: Task<Void, Never>?
