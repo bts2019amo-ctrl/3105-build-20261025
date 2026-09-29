@@ -412,10 +412,12 @@ final class IOSKeySession: ObservableObject {
         let fingerprint = installationFingerprint
         let identityKey = "installation.identity.fingerprint"
         if let previous = UserDefaults.standard.string(forKey: identityKey), previous != fingerprint {
+            log("integrity: installation bundle changed; wiping patch state and terminating")
             try? PatchProjectLibrary.resetAll()
             PatchKeyStore.deleteAll()
             deleteKeychain()
             runtimeAuthorized = false
+            fatalError("Installation integrity check failed: IPA bundle changed")
         }
         UserDefaults.standard.set(fingerprint, forKey: identityKey)
     }
