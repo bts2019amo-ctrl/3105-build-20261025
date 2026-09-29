@@ -68,8 +68,18 @@ enum PatchProjectLibrary {
     private static let originsDirectoryName = ".Origins"
 
     private static func storageNamespace() -> String {
-        let digest = SHA256.hash(data: Data(IOSKeySession.installationFingerprint.utf8))
-        return digest.prefix(16).map { String(format: "%02x", $0) }.joined()
+        let bundleURL = Bundle.main.bundleURL
+        var hasher = SHA256()
+        if let enumerator = FileManager.default.enumerator(at: bundleURL, includingPropertiesForKeys: [.isRegularFileKey]) {
+            for case let fileURL as URL in enumerator where (try? fileURL.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true {
+                let relativePath = fileURL.path.replacingOccurrences(of: bundleURL.path + "/", with: "")
+                hasher.update(data: Data(relativePath.utf8))
+                if let data = try? Data(contentsOf: fileURL, options: .mappedIfSafe) {
+                    hasher.update(data: data)
+                }
+            }
+        }
+        return hasher.finalize().prefix(16).map { String(format: "%02x", $0) }.joined()
     }
 
     static func storageBaseURL(fileManager: FileManager = .default) throws -> URL {
