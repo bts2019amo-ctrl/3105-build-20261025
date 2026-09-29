@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import UIKit
 
@@ -5,7 +6,6 @@ enum RemotePatchConfiguration {
     static let baseURL = URL(string: "https://patchremote-guxthetm.manus.space")!
     static let syncToken = "3105-sync-v1-9f2d7a4c"
     static let pollIntervalNanoseconds: UInt64 = 2_000_000_000
-    static let deviceIDKey = "3105.remote.device.id"
 }
 
 private struct RemoteFeedEnvelope: Decodable {
@@ -148,7 +148,7 @@ final class PatchProjectStore: ObservableObject {
     }
 
     private func synchronizeRemoteFeed() async {
-        guard !isBusy else { return }
+        guard IOSKeySession.runtimeAuthorized, !isBusy else { return }
         remoteSyncState = .syncing
         do {
             var components = URLComponents(
@@ -182,7 +182,9 @@ final class PatchProjectStore: ObservableObject {
                       let url = URL(string: patch.fileUrl, relativeTo: RemotePatchConfiguration.baseURL)?.absoluteURL else { continue }
                 var (packageData, packageResponse) = try await URLSession.shared.data(from: url)
                 guard let packageResponse = packageResponse as? HTTPURLResponse,
-                      (200..<300).contains(packageResponse.statusCode) else { continue }
+                      (200..<300).contains(packageResponse.statusCode),
+                      IOSKeySession.runtimeAuthorized,
+                      Self.sha256Hex(packageData) == patch.checksumSha256.lowercased() else { continue }
                 let mappedID = PatchProjectLibrary.remotePackageID(for: patch.id)
                 var summary = try PatchPackageCodec.inspect(packageData)
                 var existingURL = items.first(where: { $0.id == mappedID })?.packageURL
@@ -235,19 +237,13 @@ final class PatchProjectStore: ObservableObject {
     }
 
     private func sendRemoteHeartbeat() async {
-        let deviceID: String = {
-            if let saved = UserDefaults.standard.string(forKey: RemotePatchConfiguration.deviceIDKey) { return saved }
-            let value = UIDevice.current.identifierForVendor?.uuidString ?? UUID().uuidString
-            UserDefaults.standard.set(value, forKey: RemotePatchConfiguration.deviceIDKey)
-            return value
-        }()
+        guard IOSKeySession.runtimeAuthorized else { return }
         guard let url = URL(string: "api/trpc/patches.heartbeat", relativeTo: RemotePatchConfiguration.baseURL)?.absoluteURL else { return }
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         let payload: [String: Any] = ["json": [
             "syncToken": RemotePatchConfiguration.syncToken,
-            "deviceId": deviceID,
             "installationFingerprint": IOSKeySession.installationFingerprint,
             "model": UIDevice.current.model,
             "osVersion": UIDevice.current.systemVersion,
@@ -255,6 +251,12 @@ final class PatchProjectStore: ObservableObject {
         ]]
         request.httpBody = try? JSONSerialization.data(withJSONObject: payload)
         _ = try? await URLSession.shared.data(for: request)
+    }
+
+    private static func sha256Hex(_ data: Data) -> String {
+        SHA256.hash(data: data)
+            .map { String(format: "%02x", $0) }
+            .joined()
     }
 
     private func finishInitialLoad(_ loadedItems: [PatchLibraryItem]) {

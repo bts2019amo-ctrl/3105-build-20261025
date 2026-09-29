@@ -275,7 +275,39 @@ enum PatchProjectLibrary {
         UserDefaults.standard.set(activeMappings, forKey: remoteDefaultsKey)
     }
 
+    static func restoreAllActivePatches(
+        fileManager: FileManager = .default
+    ) throws {
+        let backupRoot = try backupRootURL(fileManager: fileManager)
+        guard let directories = try? fileManager.contentsOfDirectory(
+            at: backupRoot,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ) else { return }
+
+        var firstError: Error?
+        for directory in directories {
+            guard UUID(uuidString: directory.lastPathComponent) != nil,
+                  let projectID = UUID(uuidString: directory.lastPathComponent),
+                  let receipt = PatchTransaction.latestReceipt(
+                    projectID: projectID,
+                    backupRoot: backupRoot,
+                    fileManager: fileManager
+                  ) else { continue }
+            do {
+                try DevicePatchService.restore(
+                    receipt: receipt,
+                    allowChangedTargets: true
+                )
+            } catch {
+                firstError = firstError ?? error
+            }
+        }
+        if let firstError { throw firstError }
+    }
+
     static func resetAll(fileManager: FileManager = .default) throws {
+        try restoreAllActivePatches(fileManager: fileManager)
         let root = try packageRootURL(fileManager: fileManager)
         if fileManager.fileExists(atPath: root.path) {
             try fileManager.removeItem(at: root)

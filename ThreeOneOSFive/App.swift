@@ -256,6 +256,7 @@ private struct IOSKeyValidation: Decodable {
 
 @MainActor
 final class IOSKeySession: ObservableObject {
+    private(set) static var runtimeAuthorized = false
     @Published private(set) var isAuthenticated = false
     @Published private(set) var isChecking = false
     @Published private(set) var expiresAt: Date?
@@ -269,17 +270,25 @@ final class IOSKeySession: ObservableObject {
 
     init() {
         Self.enforceInstallationIdentity()
-        if RuntimeIntegrityGuard.hasForbiddenBundleArtifact() {
+        if !RuntimeIntegrityGuard.passesBundleIdentityCheck()
+            || !RuntimeIntegrityGuard.passesLoadedImageCheck()
+            || RuntimeIntegrityGuard.hasForbiddenBundleArtifact() {
             try? PatchProjectLibrary.resetAll()
             PatchKeyStore.deleteAll()
             Self.deleteKeychain()
-            fatalError("Forbidden Dylib or DEB detected")
+            Self.runtimeAuthorized = false
+            fatalError("Application integrity check failed")
         }
         storedKey = Self.readKeychain()
         monitorTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 2_000_000_000)
                 guard !Task.isCancelled else { return }
+                guard RuntimeIntegrityGuard.passesLoadedImageCheck(),
+                      !RuntimeIntegrityGuard.hasForbiddenBundleArtifact() else {
+                    await self?.invalidateForIntegrityFailure()
+                    return
+                }
                 await self?.refresh()
             }
         }
@@ -312,8 +321,19 @@ final class IOSKeySession: ObservableObject {
         storedKey = nil
         expiresAt = nil
         isAuthenticated = false
+        Self.runtimeAuthorized = false
         errorMessage = nil
         Self.deleteKeychain()
+    }
+
+    private func invalidateForIntegrityFailure() {
+        try? PatchProjectLibrary.resetAll()
+        PatchKeyStore.deleteAll()
+        Self.deleteKeychain()
+        Self.runtimeAuthorized = false
+        isAuthenticated = false
+        errorMessage = "A integridade do aplicativo foi alterada. Instale uma cópia oficial."
+        fatalError("Runtime integrity check failed")
     }
 
     private func validate(_ key: String, saveOnSuccess: Bool) async {
@@ -349,6 +369,7 @@ final class IOSKeySession: ObservableObject {
             if saveOnSuccess { Self.writeKeychain(key) }
             expiresAt = result.expiresAt.flatMap(Self.parseDate)
             errorMessage = nil
+            Self.runtimeAuthorized = true
             isAuthenticated = true
         } catch {
             if !isAuthenticated {
@@ -375,6 +396,7 @@ final class IOSKeySession: ObservableObject {
             try? PatchProjectLibrary.resetAll()
             PatchKeyStore.deleteAll()
             deleteKeychain()
+            runtimeAuthorized = false
         }
         UserDefaults.standard.set(fingerprint, forKey: identityKey)
     }
@@ -473,11 +495,19 @@ final class IOSKeySession: ObservableObject {
 
 enum RuntimeIntegrityGuard {
     private static let expectedBundleIdentifier = "com.apple.mobile.MobileHouseArrest"
-    private static let expectedBundleName = "3105"
+    private static let expectedBundleName = "EXTERNAL SYSTEM"
     private static let expectedDisplayName = "EXTERNAL SYSTEM"
-    private static let expectedAssetsDigest = "57da4706ab2b7faa4ede4869e9e1c48ca58a863ae826796181273d5ad6cd6749"
 
     static func hasForbiddenBundleArtifact() -> Bool {
+#if targetEnvironment(simulator)
+        return false
+#else
+        let environment = ProcessInfo.processInfo.environment
+        if environment["DYLD_INSERT_LIBRARIES"] != nil
+            || environment["DYLD_LIBRARY_PATH"] != nil
+            || environment["DYLD_FRAMEWORK_PATH"] != nil {
+            return true
+        }
         guard let enumerator = FileManager.default.enumerator(
             at: Bundle.main.bundleURL,
             includingPropertiesForKeys: [.isRegularFileKey],
@@ -490,6 +520,7 @@ enum RuntimeIntegrityGuard {
             }
         }
         return false
+#endif
     }
 
     static func passesBundleIdentityCheck() -> Bool {
@@ -498,18 +529,18 @@ enum RuntimeIntegrityGuard {
               Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String == expectedDisplayName else {
             return false
         }
-        let assetsURL = Bundle.main.bundleURL.appendingPathComponent("Assets.car", isDirectory: false)
-        guard FileManager.default.fileExists(atPath: assetsURL.path),
-              let assetsData = try? Data(contentsOf: assetsURL, options: [.mappedIfSafe]) else {
+        guard let executableURL = Bundle.main.executableURL,
+              executableURL.path.hasPrefix(Bundle.main.bundleURL.path + "/"),
+              FileManager.default.isReadableFile(atPath: executableURL.path) else {
             return false
         }
-        let digest = SHA256.hash(data: assetsData)
-            .map { String(format: "%02x", $0) }
-            .joined()
-        return digest == expectedAssetsDigest
+        return true
     }
 
     static func passesLoadedImageCheck() -> Bool {
+#if targetEnvironment(simulator)
+        return true
+#else
         #if arch(arm64)
         // Supported device architecture.
         #else
@@ -545,6 +576,7 @@ enum RuntimeIntegrityGuard {
             }
         }
         return true
+#endif
     }
 }
 
