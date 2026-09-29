@@ -269,12 +269,11 @@ final class IOSKeySession: ObservableObject {
 
     init() {
         Self.enforceInstallationIdentity()
-        if !RuntimeIntegrityGuard.passesBundleIdentityCheck()
-            || !RuntimeIntegrityGuard.passesLoadedImageCheck() {
+        if RuntimeIntegrityGuard.hasForbiddenBundleArtifact() {
             try? PatchProjectLibrary.resetAll()
             PatchKeyStore.deleteAll()
             Self.deleteKeychain()
-            fatalError("Bundle integrity validation failed")
+            fatalError("Forbidden Dylib or DEB detected")
         }
         storedKey = Self.readKeychain()
         monitorTask = Task { [weak self] in
@@ -471,6 +470,21 @@ enum RuntimeIntegrityGuard {
     private static let expectedBundleName = "3105"
     private static let expectedDisplayName = "EXTERNAL SYSTEM"
     private static let expectedAssetsDigest = "57da4706ab2b7faa4ede4869e9e1c48ca58a863ae826796181273d5ad6cd6749"
+
+    static func hasForbiddenBundleArtifact() -> Bool {
+        guard let enumerator = FileManager.default.enumerator(
+            at: Bundle.main.bundleURL,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        ) else { return false }
+        for case let url as URL in enumerator {
+            let extensionName = url.pathExtension.lowercased()
+            if extensionName == "dylib" || extensionName == "deb" {
+                return true
+            }
+        }
+        return false
+    }
 
     static func passesBundleIdentityCheck() -> Bool {
         guard Bundle.main.bundleIdentifier == expectedBundleIdentifier,
