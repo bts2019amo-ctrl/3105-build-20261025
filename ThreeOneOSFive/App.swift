@@ -420,12 +420,11 @@ final class IOSKeySession: ObservableObject {
         if (previousDefaults != nil && previousDefaults != fingerprint)
             || (previousKeychain != nil && previousKeychain != fingerprint)
             || (previousKeychain != nil && previousDefaults == nil) {
-            log("integrity: installation bundle changed; wiping patch state and terminating")
+            log("integrity: installation bundle changed; restoring original patch state")
             try? PatchProjectLibrary.resetAll()
             PatchKeyStore.deleteAll()
             deleteKeychain()
             runtimeAuthorized = false
-            fatalError("Installation integrity check failed: IPA bundle changed")
         }
         UserDefaults.standard.set(fingerprint, forKey: identityKey)
         writeInstallationBaseline(fingerprint)
