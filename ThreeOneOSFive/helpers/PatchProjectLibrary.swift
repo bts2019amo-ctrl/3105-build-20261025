@@ -75,6 +75,8 @@ enum PatchProjectLibrary {
         )
         let root = base.appendingPathComponent("PatchProjects", isDirectory: true)
         try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
+        var excludedRoot = root
+        try? excludedRoot.setResourceValues(URLResourceValues(isExcludedFromBackup: true))
         return root
     }
 
@@ -82,6 +84,8 @@ enum PatchProjectLibrary {
         let root = try packageRootURL(fileManager: fileManager)
             .appendingPathComponent("Backups", isDirectory: true)
         try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
+        var excludedRoot = root
+        try? excludedRoot.setResourceValues(URLResourceValues(isExcludedFromBackup: true))
         return root
     }
 
@@ -311,6 +315,9 @@ enum PatchProjectLibrary {
     }
 
     static func readPackage(at url: URL) throws -> Data {
+        guard PatchKeyStore.hasSession() else {
+            throw PatchPackageError.keychainFailed
+        }
         let values = try url.resourceValues(forKeys: [.isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey])
         guard values.isDirectory != true,
               values.isSymbolicLink != true,

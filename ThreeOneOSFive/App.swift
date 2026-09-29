@@ -342,6 +342,10 @@ final class IOSKeySession: ObservableObject {
                 return
             }
 
+            let requiresFreshSession = saveOnSuccess || !PatchKeyStore.hasSession()
+            if requiresFreshSession {
+                try? PatchProjectLibrary.resetAll()
+            }
             try PatchKeyStore.establishSession(
                 apiKey: key,
                 deviceID: Self.deviceIdentifier
@@ -471,14 +475,31 @@ final class IOSKeySession: ObservableObject {
 
 enum RuntimeIntegrityGuard {
     static func passesLoadedImageCheck() -> Bool {
+        #if arch(arm64)
+        // Supported device architecture.
+        #else
+        return false
+        #endif
         let bundlePath = Bundle.main.bundleURL.standardizedFileURL.path
         if let enumerator = FileManager.default.enumerator(
             at: Bundle.main.bundleURL,
-            includingPropertiesForKeys: [.isRegularFileKey],
+            includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey],
             options: [.skipsHiddenFiles]
         ) {
             for case let url as URL in enumerator {
-                if url.pathExtension.lowercased() == "dylib" {
+                let extensionName = url.pathExtension.lowercased()
+                let filename = url.lastPathComponent.lowercased()
+                let suspiciousExtensions = [
+                    "dylib", "framework", "bundle", "deb", "so", "frida", "js"
+                ]
+                let suspiciousNames = [
+                    "frida", "fridagadget", "frida-agent", "substrate", "substitute",
+                    "libhooker", "ellekit", "cycript"
+                ]
+                let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+                if values?.isSymbolicLink == true
+                    || suspiciousExtensions.contains(extensionName)
+                    || suspiciousNames.contains(where: { filename.contains($0) }) {
                     return false
                 }
             }
