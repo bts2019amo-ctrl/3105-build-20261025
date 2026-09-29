@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 enum PatchWorkspaceService {
@@ -10,6 +11,11 @@ enum PatchWorkspaceService {
     private static let manifestFilename = ".3105-project.plist"
     private static let manifestSchemaVersion = 1
 
+    private static func storageNamespace() -> String {
+        let digest = SHA256.hash(data: Data(IOSKeySession.installationFingerprint.utf8))
+        return digest.prefix(16).map { String(format: "%02x", $0) }.joined()
+    }
+
     static func documentsRootURL(fileManager: FileManager = .default) throws -> URL {
         try fileManager.url(
             for: .documentDirectory,
@@ -21,9 +27,16 @@ enum PatchWorkspaceService {
 
     static func patchesRootURL(fileManager: FileManager = .default) throws -> URL {
         let documents = try documentsRootURL(fileManager: fileManager)
-        let root = documents.appendingPathComponent("Patches", isDirectory: true)
+        let root = documents
+            .appendingPathComponent("Patches", isDirectory: true)
+            .appendingPathComponent(storageNamespace(), isDirectory: true)
         try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
         return root
+    }
+
+    static func patchesBaseRootURL(fileManager: FileManager = .default) throws -> URL {
+        try documentsRootURL(fileManager: fileManager)
+            .appendingPathComponent("Patches", isDirectory: true)
     }
 
     static func createWorkspace(

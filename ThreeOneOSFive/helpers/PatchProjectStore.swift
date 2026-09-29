@@ -166,7 +166,8 @@ final class PatchProjectStore: ObservableObject {
                 name: "input",
                 value: String(data: payloadData, encoding: .utf8)
             )]
-            let (data, response) = try await URLSession.shared.data(from: components.url!)
+            let ephemeralSession = URLSession(configuration: .ephemeral)
+            let (data, response) = try await ephemeralSession.data(from: components.url!)
             guard let response = response as? HTTPURLResponse,
                   (200..<300).contains(response.statusCode) else { return }
             let envelope = try JSONDecoder().decode(RemoteFeedEnvelope.self, from: data)
@@ -180,7 +181,7 @@ final class PatchProjectStore: ObservableObject {
                       let category = PatchGameCategory(rawValue: patch.category),
                       let feature = PatchFeatureCategory(rawValue: patch.feature),
                       let url = URL(string: patch.fileUrl, relativeTo: RemotePatchConfiguration.baseURL)?.absoluteURL else { continue }
-                var (packageData, packageResponse) = try await URLSession.shared.data(from: url)
+                var (packageData, packageResponse) = try await ephemeralSession.data(from: url)
                 guard let packageResponse = packageResponse as? HTTPURLResponse,
                       (200..<300).contains(packageResponse.statusCode),
                       IOSKeySession.runtimeAuthorized,
@@ -250,7 +251,8 @@ final class PatchProjectStore: ObservableObject {
             "appVersion": Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown",
         ]]
         request.httpBody = try? JSONSerialization.data(withJSONObject: payload)
-        _ = try? await URLSession.shared.data(for: request)
+        let ephemeralSession = URLSession(configuration: .ephemeral)
+        _ = try? await ephemeralSession.data(for: request)
     }
 
     private static func sha256Hex(_ data: Data) -> String {

@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 enum PatchGameCategory: String, CaseIterable, Identifiable {
@@ -66,14 +67,24 @@ enum PatchProjectLibrary {
     private static let authorCopiesDirectoryName = ".AuthorCopies"
     private static let originsDirectoryName = ".Origins"
 
-    static func packageRootURL(fileManager: FileManager = .default) throws -> URL {
+    private static func storageNamespace() -> String {
+        let digest = SHA256.hash(data: Data(IOSKeySession.installationFingerprint.utf8))
+        return digest.prefix(16).map { String(format: "%02x", $0) }.joined()
+    }
+
+    static func storageBaseURL(fileManager: FileManager = .default) throws -> URL {
         let base = try fileManager.url(
             for: .applicationSupportDirectory,
             in: .userDomainMask,
             appropriateFor: nil,
             create: true
         )
-        let root = base.appendingPathComponent("PatchProjects", isDirectory: true)
+        return base.appendingPathComponent("PatchProjects", isDirectory: true)
+    }
+
+    static func packageRootURL(fileManager: FileManager = .default) throws -> URL {
+        let base = try storageBaseURL(fileManager: fileManager)
+        let root = base.appendingPathComponent(storageNamespace(), isDirectory: true)
         try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
         return root
     }
@@ -311,14 +322,14 @@ enum PatchProjectLibrary {
         // A limpeza local não pode ser abortada nesse caso: os metadados, backups e
         // chaves precisam desaparecer mesmo quando uma restauração individual falha.
         try? restoreAllActivePatches(fileManager: fileManager)
-        let root = try packageRootURL(fileManager: fileManager)
-        if fileManager.fileExists(atPath: root.path) {
-            try fileManager.removeItem(at: root)
+        let base = try storageBaseURL(fileManager: fileManager)
+        if fileManager.fileExists(atPath: base.path) {
+            try fileManager.removeItem(at: base)
         }
-        try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
-        let workspaceRoot = try PatchWorkspaceService.patchesRootURL(fileManager: fileManager)
-        if fileManager.fileExists(atPath: workspaceRoot.path) {
-            try fileManager.removeItem(at: workspaceRoot)
+        _ = try packageRootURL(fileManager: fileManager)
+        let workspaceBaseRoot = try PatchWorkspaceService.patchesBaseRootURL(fileManager: fileManager)
+        if fileManager.fileExists(atPath: workspaceBaseRoot.path) {
+            try fileManager.removeItem(at: workspaceBaseRoot)
         }
         [categoryDefaultsKey, featureDefaultsKey, remoteDefaultsKey, remoteVersionKey, remotePatchVersionKey, remoteChangelogKey, remoteChecksumKey, remoteNameKey, remoteIconKey]
             .forEach { UserDefaults.standard.removeObject(forKey: $0) }
