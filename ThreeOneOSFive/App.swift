@@ -2,6 +2,7 @@ import SwiftUI
 import UIKit
 import Security
 import CryptoKit
+import MachO
 
 @main
 struct ThreeOneOSFiveApp: App {
@@ -22,6 +23,11 @@ struct ThreeOneOSFiveApp: App {
 
     init() {
         setupLogCapture()
+        if !RuntimeIntegrityGuard.passesLoadedImageCheck() {
+            try? PatchProjectLibrary.resetAll()
+            PatchKeyStore.deleteAll()
+            fatalError("External dynamic library detected")
+        }
         log("app: 3105 launching — iOS \(AppInfo.osVersion) (\(AppInfo.osBuild)) \(AppInfo.machineName)")
     }
 
@@ -115,6 +121,7 @@ struct ThreeOneOSFiveApp: App {
                 appState.detectSupport()
             }
             .onOpenURL { url in
+                guard keySession.isAuthenticated else { return }
                 patchDraftCoordinator.presentImport(url)
             }
             .tint(AppTheme.accent)
@@ -298,6 +305,7 @@ final class IOSKeySession: ObservableObject {
 
     func logout() {
         try? PatchProjectLibrary.resetAll()
+        PatchKeyStore.clearSession()
         storedKey = nil
         expiresAt = nil
         isAuthenticated = false
@@ -334,6 +342,10 @@ final class IOSKeySession: ObservableObject {
                 return
             }
 
+            try PatchKeyStore.establishSession(
+                apiKey: key,
+                deviceID: Self.deviceIdentifier
+            )
             storedKey = key
             if saveOnSuccess { Self.writeKeychain(key) }
             expiresAt = result.expiresAt.flatMap(Self.parseDate)
@@ -363,7 +375,8 @@ final class IOSKeySession: ObservableObject {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"
         let executableHash = executableDigest() ?? "unavailable"
-        let fingerprint = "\(bundleID)|\(bundleName)|\(version)|\(build)|\(executableHash)"
+        let bundleHash = bundleDigest() ?? "unavailable"
+        let fingerprint = "\(bundleID)|\(bundleName)|\(version)|\(build)|\(executableHash)|\(bundleHash)"
         let identityKey = "installation.identity.fingerprint"
         if let previous = UserDefaults.standard.string(forKey: identityKey), previous != fingerprint {
             try? PatchProjectLibrary.resetAll()
@@ -378,6 +391,29 @@ final class IOSKeySession: ObservableObject {
             return nil
         }
         return SHA256.hash(data: executableData).map { String(format: "%02x", $0) }.joined()
+    }
+
+    private static func bundleDigest() -> String? {
+        let root = Bundle.main.bundleURL.standardizedFileURL
+        guard let enumerator = FileManager.default.enumerator(
+            at: root,
+            includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey],
+            options: [.skipsHiddenFiles]
+        ) else { return nil }
+
+        var digestInput = Data()
+        for case let url as URL in enumerator {
+            guard let values = try? url.resourceValues(
+                forKeys: [.isRegularFileKey, .isSymbolicLinkKey]
+            ), values.isRegularFile == true, values.isSymbolicLink != true,
+            let data = try? Data(contentsOf: url, options: [.mappedIfSafe]) else { continue }
+            let relativePath = url.path.replacingOccurrences(of: root.path + "/", with: "")
+            digestInput.append(contentsOf: Data(relativePath.utf8))
+            digestInput.append(0)
+            digestInput.append(contentsOf: data)
+            digestInput.append(0)
+        }
+        return SHA256.hash(data: digestInput).map { String(format: "%02x", $0) }.joined()
     }
 
     private static let dateFormatter: ISO8601DateFormatter = {
@@ -430,6 +466,39 @@ final class IOSKeySession: ObservableObject {
             kSecAttrAccount as String: keychainAccount
         ]
         SecItemDelete(query as CFDictionary)
+    }
+}
+
+enum RuntimeIntegrityGuard {
+    static func passesLoadedImageCheck() -> Bool {
+        let bundlePath = Bundle.main.bundleURL.standardizedFileURL.path
+        if let enumerator = FileManager.default.enumerator(
+            at: Bundle.main.bundleURL,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        ) {
+            for case let url as URL in enumerator {
+                if url.pathExtension.lowercased() == "dylib" {
+                    return false
+                }
+            }
+        }
+        let imageCount = _dyld_image_count()
+        for index in 0..<imageCount {
+            guard let pointer = _dyld_get_image_name(index),
+                  let rawPath = String(validatingUTF8: pointer) else { continue }
+            let path = URL(fileURLWithPath: rawPath).standardizedFileURL.path
+            let isSystemImage = path.hasPrefix("/System/Library/")
+                || path.hasPrefix("/usr/lib/")
+                || path.hasPrefix("/usr/libexec/")
+            let isBundleDynamicImage = path.hasPrefix(bundlePath)
+                && (path.lowercased().hasSuffix(".dylib")
+                    || path.lowercased().contains(".framework/"))
+            if !isSystemImage && isBundleDynamicImage {
+                return false
+            }
+        }
+        return true
     }
 }
 

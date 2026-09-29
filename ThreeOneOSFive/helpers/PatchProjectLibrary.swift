@@ -287,6 +287,7 @@ enum PatchProjectLibrary {
         }
         [categoryDefaultsKey, featureDefaultsKey, remoteDefaultsKey, remoteVersionKey, remotePatchVersionKey, remoteChangelogKey, remoteChecksumKey, remoteNameKey, remoteIconKey]
             .forEach { UserDefaults.standard.removeObject(forKey: $0) }
+        PatchKeyStore.deleteAll()
     }
 
     static var selectedCategory: PatchGameCategory {
@@ -316,7 +317,15 @@ enum PatchProjectLibrary {
               values.isRegularFile == true else {
             throw PatchPackageError.invalidProject
         }
-        return try Data(contentsOf: url, options: .mappedIfSafe)
+        let data = try Data(contentsOf: url, options: .mappedIfSafe)
+        let plaintext = try PatchKeyStore.decryptAtRest(data)
+        if plaintext == data {
+            try? PatchKeyStore.encryptAtRest(data).write(
+                to: url,
+                options: [.atomic, .completeFileProtection]
+            )
+        }
+        return plaintext
     }
 
     static func save(
@@ -339,7 +348,8 @@ enum PatchProjectLibrary {
             }
             destination = candidate
         }
-        try data.write(to: destination, options: [.atomic, .completeFileProtection])
+        let protectedData = try PatchKeyStore.encryptAtRest(data)
+        try protectedData.write(to: destination, options: [.atomic, .completeFileProtection])
         return destination
     }
 
@@ -439,7 +449,7 @@ enum PatchProjectLibrary {
             }
         } catch {
             if let previousData, let existingURL {
-                try? previousData.write(
+                try? PatchKeyStore.encryptAtRest(previousData).write(
                     to: existingURL,
                     options: [.atomic, .completeFileProtection]
                 )
