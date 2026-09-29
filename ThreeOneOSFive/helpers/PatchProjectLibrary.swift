@@ -299,29 +299,38 @@ enum PatchProjectLibrary {
     static func restoreAllActivePatches(
         fileManager: FileManager = .default
     ) throws {
-        let backupRoot = try backupRootURL(fileManager: fileManager)
-        guard let directories = try? fileManager.contentsOfDirectory(
-            at: backupRoot,
+        var firstError: Error?
+        let base = try storageBaseURL(fileManager: fileManager)
+        guard let namespaceDirectories = try? fileManager.contentsOfDirectory(
+            at: base,
             includingPropertiesForKeys: [.isDirectoryKey],
             options: [.skipsHiddenFiles]
         ) else { return }
 
-        var firstError: Error?
-        for directory in directories {
-            guard UUID(uuidString: directory.lastPathComponent) != nil,
-                  let projectID = UUID(uuidString: directory.lastPathComponent),
-                  let receipt = PatchTransaction.latestReceipt(
-                    projectID: projectID,
-                    backupRoot: backupRoot,
-                    fileManager: fileManager
-                  ) else { continue }
-            do {
-                try DevicePatchService.restore(
-                    receipt: receipt,
-                    allowChangedTargets: true
-                )
-            } catch {
-                firstError = firstError ?? error
+        // Include the legacy unsuffixed layout as well as every digest namespace.
+        let backupRoots = namespaceDirectories
+            .filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
+            .map { $0.appendingPathComponent("Backups", isDirectory: true) }
+            + [base.appendingPathComponent("Backups", isDirectory: true)]
+
+        for backupRoot in backupRoots where fileManager.fileExists(atPath: backupRoot.path) {
+            guard let directories = try? fileManager.contentsOfDirectory(
+                at: backupRoot,
+                includingPropertiesForKeys: [.isDirectoryKey],
+                options: [.skipsHiddenFiles]
+            ) else { continue }
+            for directory in directories {
+                guard let projectID = UUID(uuidString: directory.lastPathComponent),
+                      let receipt = PatchTransaction.latestReceipt(
+                        projectID: projectID,
+                        backupRoot: backupRoot,
+                        fileManager: fileManager
+                      ) else { continue }
+                do {
+                    try DevicePatchService.restore(receipt: receipt, allowChangedTargets: true)
+                } catch {
+                    firstError = firstError ?? error
+                }
             }
         }
         if let firstError { throw firstError }
