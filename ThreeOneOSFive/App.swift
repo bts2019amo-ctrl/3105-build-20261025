@@ -269,6 +269,12 @@ final class IOSKeySession: ObservableObject {
 
     init() {
         Self.enforceInstallationIdentity()
+        if !RuntimeIntegrityGuard.passesBundleIdentityCheck()
+            || !RuntimeIntegrityGuard.passesLoadedImageCheck() {
+            try? PatchProjectLibrary.resetAll()
+            PatchKeyStore.deleteAll()
+            Self.deleteKeychain()
+        }
         storedKey = Self.readKeychain()
         monitorTask = Task { [weak self] in
             while !Task.isCancelled {
