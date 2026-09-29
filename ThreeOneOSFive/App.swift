@@ -284,6 +284,8 @@ final class IOSKeySession: ObservableObject {
     private static let endpoint = URL(string: "https://proxysystem.org/api/trpc/proxyKeys.publicCheckKey")!
     private static let keychainService = "com.3105.ios-key"
     private static let keychainAccount = "proxy-system-key"
+    private static let identityKeychainService = "com.3105.installation-integrity"
+    private static let identityKeychainAccount = "bundle-fingerprint"
     private var storedKey: String?
     private var monitorTask: Task<Void, Never>?
 
@@ -413,7 +415,11 @@ final class IOSKeySession: ObservableObject {
     private static func enforceInstallationIdentity() {
         let fingerprint = installationFingerprint
         let identityKey = "installation.identity.fingerprint"
-        if let previous = UserDefaults.standard.string(forKey: identityKey), previous != fingerprint {
+        let previousDefaults = UserDefaults.standard.string(forKey: identityKey)
+        let previousKeychain = readInstallationBaseline()
+        if (previousDefaults != nil && previousDefaults != fingerprint)
+            || (previousKeychain != nil && previousKeychain != fingerprint)
+            || (previousKeychain != nil && previousDefaults == nil) {
             log("integrity: installation bundle changed; wiping patch state and terminating")
             try? PatchProjectLibrary.resetAll()
             PatchKeyStore.deleteAll()
@@ -422,6 +428,7 @@ final class IOSKeySession: ObservableObject {
             fatalError("Installation integrity check failed: IPA bundle changed")
         }
         UserDefaults.standard.set(fingerprint, forKey: identityKey)
+        writeInstallationBaseline(fingerprint)
     }
 
     static var installationFingerprint: String {
@@ -515,6 +522,40 @@ final class IOSKeySession: ObservableObject {
         ]
         SecItemDelete(query as CFDictionary)
     }
+
+    static func installationBaselineMatches() -> Bool {
+        let fingerprint = installationFingerprint
+        return UserDefaults.standard.string(forKey: "installation.identity.fingerprint") == fingerprint
+            && readInstallationBaseline() == fingerprint
+    }
+
+    private static func readInstallationBaseline() -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: identityKeychainService,
+            kSecAttrAccount as String: identityKeychainAccount,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+        var result: AnyObject?
+        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+              let data = result as? Data else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    private static func writeInstallationBaseline(_ fingerprint: String) {
+        let data = Data(fingerprint.utf8)
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: identityKeychainService,
+            kSecAttrAccount as String: identityKeychainAccount
+        ]
+        SecItemDelete(query as CFDictionary)
+        var item = query
+        item[kSecValueData as String] = data
+        item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        SecItemAdd(item as CFDictionary, nil)
+    }
 }
 
 enum RuntimeIntegrityGuard {
@@ -563,10 +604,7 @@ enum RuntimeIntegrityGuard {
 
     @MainActor
     static func passesInstallationBaseline() -> Bool {
-        guard let baseline = UserDefaults.standard.string(forKey: "installation.identity.fingerprint") else {
-            return false
-        }
-        return baseline == IOSKeySession.installationFingerprint
+        IOSKeySession.installationBaselineMatches()
     }
 
     static func passesLoadedImageCheck() -> Bool {
