@@ -477,8 +477,11 @@ enum RuntimeIntegrityGuard {
     static func passesBundleIdentityCheck() -> Bool {
         guard Bundle.main.bundleIdentifier == expectedBundleIdentifier,
               Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String == expectedBundleName,
-              Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String == expectedDisplayName,
-              let assetsURL = Bundle.main.url(forResource: "Assets", withExtension: "car"),
+              Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String == expectedDisplayName else {
+            return false
+        }
+        let assetsURL = Bundle.main.bundleURL.appendingPathComponent("Assets.car", isDirectory: false)
+        guard FileManager.default.fileExists(atPath: assetsURL.path),
               let assetsData = try? Data(contentsOf: assetsURL, options: [.mappedIfSafe]) else {
             return false
         }
