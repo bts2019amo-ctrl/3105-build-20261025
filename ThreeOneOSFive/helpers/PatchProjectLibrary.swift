@@ -75,10 +75,6 @@ enum PatchProjectLibrary {
         )
         let root = base.appendingPathComponent("PatchProjects", isDirectory: true)
         try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
-        var excludedRoot = root
-        var excludedValues = URLResourceValues()
-        excludedValues.isExcludedFromBackup = true
-        try? excludedRoot.setResourceValues(excludedValues)
         return root
     }
 
@@ -86,10 +82,6 @@ enum PatchProjectLibrary {
         let root = try packageRootURL(fileManager: fileManager)
             .appendingPathComponent("Backups", isDirectory: true)
         try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
-        var excludedRoot = root
-        var excludedValues = URLResourceValues()
-        excludedValues.isExcludedFromBackup = true
-        try? excludedRoot.setResourceValues(excludedValues)
         return root
     }
 
@@ -295,7 +287,6 @@ enum PatchProjectLibrary {
         }
         [categoryDefaultsKey, featureDefaultsKey, remoteDefaultsKey, remoteVersionKey, remotePatchVersionKey, remoteChangelogKey, remoteChecksumKey, remoteNameKey, remoteIconKey]
             .forEach { UserDefaults.standard.removeObject(forKey: $0) }
-        PatchKeyStore.deleteAll()
     }
 
     static var selectedCategory: PatchGameCategory {
@@ -319,24 +310,30 @@ enum PatchProjectLibrary {
     }
 
     static func readPackage(at url: URL) throws -> Data {
-        guard PatchKeyStore.hasSession() else {
-            throw PatchPackageError.keychainFailed
-        }
         let values = try url.resourceValues(forKeys: [.isDirectoryKey, .isRegularFileKey, .isSymbolicLinkKey])
         guard values.isDirectory != true,
               values.isSymbolicLink != true,
               values.isRegularFile == true else {
             throw PatchPackageError.invalidProject
         }
-        let data = try Data(contentsOf: url, options: .mappedIfSafe)
-        let plaintext = try PatchKeyStore.decryptAtRest(data)
-        if plaintext == data {
-            try? PatchKeyStore.encryptAtRest(data).write(
-                to: url,
-                options: [.atomic, .completeFileProtection]
-            )
+        return try Data(contentsOf: url, options: .mappedIfSafe)
+    }
+
+    static func removeObsoleteProtectedStorage(fileManager: FileManager = .default) {
+        guard let root = try? packageRootURL(fileManager: fileManager),
+              let urls = try? fileManager.contentsOfDirectory(
+                at: root,
+                includingPropertiesForKeys: nil,
+                options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants]
+              ) else { return }
+        let hasObsoleteFiles = urls.contains { url in
+            guard url.pathExtension.lowercased() == "3105",
+                  let data = try? Data(contentsOf: url, options: [.mappedIfSafe]) else { return false }
+            return data.starts(with: Data("EXTSYS".utf8))
         }
-        return plaintext
+        if hasObsoleteFiles {
+            try? resetAll(fileManager: fileManager)
+        }
     }
 
     static func save(
@@ -359,8 +356,7 @@ enum PatchProjectLibrary {
             }
             destination = candidate
         }
-        let protectedData = try PatchKeyStore.encryptAtRest(data)
-        try protectedData.write(to: destination, options: [.atomic, .completeFileProtection])
+        try data.write(to: destination, options: [.atomic, .completeFileProtection])
         return destination
     }
 
@@ -460,7 +456,7 @@ enum PatchProjectLibrary {
             }
         } catch {
             if let previousData, let existingURL {
-                try? PatchKeyStore.encryptAtRest(previousData).write(
+                try? previousData.write(
                     to: existingURL,
                     options: [.atomic, .completeFileProtection]
                 )

@@ -23,10 +23,11 @@ struct ThreeOneOSFiveApp: App {
 
     init() {
         setupLogCapture()
-        if !RuntimeIntegrityGuard.passesLoadedImageCheck() {
+        if !RuntimeIntegrityGuard.passesBundleIdentityCheck()
+            || !RuntimeIntegrityGuard.passesLoadedImageCheck() {
             try? PatchProjectLibrary.resetAll()
             PatchKeyStore.deleteAll()
-            fatalError("External dynamic library detected")
+            fatalError("Bundle integrity validation failed")
         }
         log("app: 3105 launching — iOS \(AppInfo.osVersion) (\(AppInfo.osBuild)) \(AppInfo.machineName)")
     }
@@ -100,6 +101,7 @@ struct ThreeOneOSFiveApp: App {
             }
             .onAppear {
                 if keySession.isAuthenticated && !showOnboarding {
+                    PatchProjectLibrary.removeObsoleteProtectedStorage()
                     patchStore.activate()
                     patchStore.startRemoteSync()
                     appState.detectSupport()
@@ -108,6 +110,7 @@ struct ThreeOneOSFiveApp: App {
             }
             .onChange(of: keySession.isAuthenticated) { authenticated in
                 if authenticated {
+                    PatchProjectLibrary.removeObsoleteProtectedStorage()
                     patchStore.activate()
                     patchStore.startRemoteSync()
                     appState.detectSupport()
@@ -342,14 +345,6 @@ final class IOSKeySession: ObservableObject {
                 return
             }
 
-            let requiresFreshSession = saveOnSuccess || !PatchKeyStore.hasSession()
-            if requiresFreshSession {
-                try? PatchProjectLibrary.resetAll()
-            }
-            try PatchKeyStore.establishSession(
-                apiKey: key,
-                deviceID: Self.deviceIdentifier
-            )
             storedKey = key
             if saveOnSuccess { Self.writeKeychain(key) }
             expiresAt = result.expiresAt.flatMap(Self.parseDate)
@@ -474,6 +469,25 @@ final class IOSKeySession: ObservableObject {
 }
 
 enum RuntimeIntegrityGuard {
+    private static let expectedBundleIdentifier = "com.apple.mobile.MobileHouseArrest"
+    private static let expectedBundleName = "3105"
+    private static let expectedDisplayName = "EXTERNAL SYSTEM"
+    private static let expectedAssetsDigest = "57da4706ab2b7faa4ede4869e9e1c48ca58a863ae826796181273d5ad6cd6749"
+
+    static func passesBundleIdentityCheck() -> Bool {
+        guard Bundle.main.bundleIdentifier == expectedBundleIdentifier,
+              Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String == expectedBundleName,
+              Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String == expectedDisplayName,
+              let assetsURL = Bundle.main.url(forResource: "Assets", withExtension: "car"),
+              let assetsData = try? Data(contentsOf: assetsURL, options: [.mappedIfSafe]) else {
+            return false
+        }
+        let digest = SHA256.hash(data: assetsData)
+            .map { String(format: "%02x", $0) }
+            .joined()
+        return digest == expectedAssetsDigest
+    }
+
     static func passesLoadedImageCheck() -> Bool {
         #if arch(arm64)
         // Supported device architecture.
