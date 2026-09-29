@@ -424,8 +424,9 @@ final class IOSKeySession: ObservableObject {
         let bundleID = Bundle.main.bundleIdentifier ?? "unknown.bundle"
         let bundleName = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "unknown"
         let displayName = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "unknown"
-        let executableHash = executableDigest() ?? "missing-executable"
-        return "\(bundleID)|\(bundleName)|\(displayName)|exec:\(executableHash)"
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"
+        let bundleHash = bundleDigest() ?? executableDigest() ?? "missing-bundle"
+        return "\(bundleID)|\(bundleName)|\(displayName)|version:\(version)|bundle:\(bundleHash)"
     }
 
     private static func executableDigest() -> String? {

@@ -307,7 +307,10 @@ enum PatchProjectLibrary {
     }
 
     static func resetAll(fileManager: FileManager = .default) throws {
-        try restoreAllActivePatches(fileManager: fileManager)
+        // A reinstalação pode alterar o alvo antes de o app conseguir restaurá-lo.
+        // A limpeza local não pode ser abortada nesse caso: os metadados, backups e
+        // chaves precisam desaparecer mesmo quando uma restauração individual falha.
+        try? restoreAllActivePatches(fileManager: fileManager)
         let root = try packageRootURL(fileManager: fileManager)
         if fileManager.fileExists(atPath: root.path) {
             try fileManager.removeItem(at: root)
