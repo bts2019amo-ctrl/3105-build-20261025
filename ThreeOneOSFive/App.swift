@@ -372,11 +372,8 @@ final class IOSKeySession: ObservableObject {
     private static func enforceInstallationIdentity() {
         let bundleID = Bundle.main.bundleIdentifier ?? "unknown.bundle"
         let bundleName = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "unknown"
-        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
-        let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"
-        let executableHash = executableDigest() ?? "unavailable"
-        let bundleHash = bundleDigest() ?? "unavailable"
-        let fingerprint = "\(bundleID)|\(bundleName)|\(version)|\(build)|\(executableHash)|\(bundleHash)"
+        let displayName = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "unknown"
+        let fingerprint = "\(bundleID)|\(bundleName)|\(displayName)"
         let identityKey = "installation.identity.fingerprint"
         if let previous = UserDefaults.standard.string(forKey: identityKey), previous != fingerprint {
             try? PatchProjectLibrary.resetAll()
@@ -501,23 +498,13 @@ enum RuntimeIntegrityGuard {
         let bundlePath = Bundle.main.bundleURL.standardizedFileURL.path
         if let enumerator = FileManager.default.enumerator(
             at: Bundle.main.bundleURL,
-            includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey],
+            includingPropertiesForKeys: [.isRegularFileKey],
             options: [.skipsHiddenFiles]
         ) {
             for case let url as URL in enumerator {
                 let extensionName = url.pathExtension.lowercased()
-                let filename = url.lastPathComponent.lowercased()
-                let suspiciousExtensions = [
-                    "dylib", "framework", "bundle", "deb", "so", "frida", "js"
-                ]
-                let suspiciousNames = [
-                    "frida", "fridagadget", "frida-agent", "substrate", "substitute",
-                    "libhooker", "ellekit", "cycript"
-                ]
-                let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
-                if values?.isSymbolicLink == true
-                    || suspiciousExtensions.contains(extensionName)
-                    || suspiciousNames.contains(where: { filename.contains($0) }) {
+                if extensionName == "dylib"
+                    || extensionName == "deb" {
                     return false
                 }
             }
@@ -530,10 +517,10 @@ enum RuntimeIntegrityGuard {
             let isSystemImage = path.hasPrefix("/System/Library/")
                 || path.hasPrefix("/usr/lib/")
                 || path.hasPrefix("/usr/libexec/")
-            let isBundleDynamicImage = path.hasPrefix(bundlePath)
-                && (path.lowercased().hasSuffix(".dylib")
-                    || path.lowercased().contains(".framework/"))
-            if !isSystemImage && isBundleDynamicImage {
+            let extensionName = URL(fileURLWithPath: path).pathExtension.lowercased()
+            let isBundleForbiddenFile = path.hasPrefix(bundlePath)
+                && (extensionName == "dylib" || extensionName == "deb")
+            if !isSystemImage && isBundleForbiddenFile {
                 return false
             }
         }
