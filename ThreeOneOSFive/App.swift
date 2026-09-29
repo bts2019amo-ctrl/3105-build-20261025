@@ -291,7 +291,8 @@ final class IOSKeySession: ObservableObject {
         Self.enforceInstallationIdentity()
         if !RuntimeIntegrityGuard.passesBundleIdentityCheck()
             || !RuntimeIntegrityGuard.passesLoadedImageCheck()
-            || RuntimeIntegrityGuard.hasForbiddenBundleArtifact() {
+            || RuntimeIntegrityGuard.hasForbiddenBundleArtifact()
+            || !RuntimeIntegrityGuard.passesInstallationBaseline() {
             try? PatchProjectLibrary.resetAll()
             PatchKeyStore.deleteAll()
             Self.deleteKeychain()
@@ -304,7 +305,8 @@ final class IOSKeySession: ObservableObject {
                 try? await Task.sleep(nanoseconds: 2_000_000_000)
                 guard !Task.isCancelled else { return }
                 guard RuntimeIntegrityGuard.passesLoadedImageCheck(),
-                      !RuntimeIntegrityGuard.hasForbiddenBundleArtifact() else {
+                      !RuntimeIntegrityGuard.hasForbiddenBundleArtifact(),
+                      RuntimeIntegrityGuard.passesInstallationBaseline() else {
                     await self?.invalidateForIntegrityFailure()
                     return
                 }
@@ -444,7 +446,7 @@ final class IOSKeySession: ObservableObject {
         guard let enumerator = FileManager.default.enumerator(
             at: root,
             includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey],
-            options: [.skipsHiddenFiles]
+            options: []
         ) else { return nil }
 
         var digestInput = Data()
@@ -533,7 +535,7 @@ enum RuntimeIntegrityGuard {
         guard let enumerator = FileManager.default.enumerator(
             at: Bundle.main.bundleURL,
             includingPropertiesForKeys: [.isRegularFileKey],
-            options: [.skipsHiddenFiles]
+            options: []
         ) else { return false }
         for case let url as URL in enumerator {
             let extensionName = url.pathExtension.lowercased()
@@ -559,6 +561,14 @@ enum RuntimeIntegrityGuard {
         return true
     }
 
+    @MainActor
+    static func passesInstallationBaseline() -> Bool {
+        guard let baseline = UserDefaults.standard.string(forKey: "installation.identity.fingerprint") else {
+            return false
+        }
+        return baseline == IOSKeySession.installationFingerprint
+    }
+
     static func passesLoadedImageCheck() -> Bool {
 #if targetEnvironment(simulator)
         return true
@@ -572,7 +582,7 @@ enum RuntimeIntegrityGuard {
         if let enumerator = FileManager.default.enumerator(
             at: Bundle.main.bundleURL,
             includingPropertiesForKeys: [.isRegularFileKey],
-            options: [.skipsHiddenFiles]
+            options: []
         ) {
             for case let url as URL in enumerator {
                 let extensionName = url.pathExtension.lowercased()
