@@ -274,6 +274,7 @@ final class IOSKeySession: ObservableObject {
             try? PatchProjectLibrary.resetAll()
             PatchKeyStore.deleteAll()
             Self.deleteKeychain()
+            fatalError("Bundle integrity validation failed")
         }
         storedKey = Self.readKeychain()
         monitorTask = Task { [weak self] in
