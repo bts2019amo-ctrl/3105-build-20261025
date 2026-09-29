@@ -156,7 +156,10 @@ final class PatchProjectStore: ObservableObject {
                 resolvingAgainstBaseURL: false
             )!
             let payload: [String: Any] = [
-                "json": ["syncToken": RemotePatchConfiguration.syncToken]
+                "json": [
+                    "syncToken": RemotePatchConfiguration.syncToken,
+                    "installationFingerprint": IOSKeySession.installationFingerprint
+                ]
             ]
             let payloadData = try JSONSerialization.data(withJSONObject: payload)
             components.queryItems = [URLQueryItem(
@@ -245,6 +248,7 @@ final class PatchProjectStore: ObservableObject {
         let payload: [String: Any] = ["json": [
             "syncToken": RemotePatchConfiguration.syncToken,
             "deviceId": deviceID,
+            "installationFingerprint": IOSKeySession.installationFingerprint,
             "model": UIDevice.current.model,
             "osVersion": UIDevice.current.systemVersion,
             "appVersion": Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown",

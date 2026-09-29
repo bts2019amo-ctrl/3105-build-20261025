@@ -369,11 +369,7 @@ final class IOSKeySession: ObservableObject {
     }
 
     private static func enforceInstallationIdentity() {
-        let bundleID = Bundle.main.bundleIdentifier ?? "unknown.bundle"
-        let bundleName = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "unknown"
-        let displayName = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "unknown"
-        let executableHash = executableDigest() ?? "missing-executable"
-        let fingerprint = "\(bundleID)|\(bundleName)|\(displayName)|exec:\(executableHash)"
+        let fingerprint = installationFingerprint
         let identityKey = "installation.identity.fingerprint"
         if let previous = UserDefaults.standard.string(forKey: identityKey), previous != fingerprint {
             try? PatchProjectLibrary.resetAll()
@@ -381,6 +377,14 @@ final class IOSKeySession: ObservableObject {
             deleteKeychain()
         }
         UserDefaults.standard.set(fingerprint, forKey: identityKey)
+    }
+
+    static var installationFingerprint: String {
+        let bundleID = Bundle.main.bundleIdentifier ?? "unknown.bundle"
+        let bundleName = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "unknown"
+        let displayName = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "unknown"
+        let executableHash = executableDigest() ?? "missing-executable"
+        return "\(bundleID)|\(bundleName)|\(displayName)|exec:\(executableHash)"
     }
 
     private static func executableDigest() -> String? {
