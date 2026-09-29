@@ -23,12 +23,6 @@ struct ThreeOneOSFiveApp: App {
 
     init() {
         setupLogCapture()
-        if !RuntimeIntegrityGuard.passesBundleIdentityCheck()
-            || !RuntimeIntegrityGuard.passesLoadedImageCheck() {
-            try? PatchProjectLibrary.resetAll()
-            PatchKeyStore.deleteAll()
-            fatalError("Bundle integrity validation failed")
-        }
         log("app: 3105 launching — iOS \(AppInfo.osVersion) (\(AppInfo.osBuild)) \(AppInfo.machineName)")
     }
 
