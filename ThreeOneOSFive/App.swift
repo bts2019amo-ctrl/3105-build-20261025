@@ -609,7 +609,7 @@ final class DeviceEnrollmentGate: ObservableObject {
     @Published private(set) var statusMessage = "Preparando a ativação segura…"
     @Published private(set) var errorMessage: String?
 
-    private static let portalOrigin = URL(string: "https://8328-i17ddqgwsold47tov3k6u-6b77b715.us1.manus.computer")!
+    private static let portalOrigin = URL(string: "https://externalsyst-eara5kjo.manus.space")!
     private static let completedKey = "external-system.device-enrollment.completed"
     private var challenge: String?
     private var hasOpenedPortal = false
