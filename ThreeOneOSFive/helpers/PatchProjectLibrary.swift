@@ -76,7 +76,9 @@ enum PatchProjectLibrary {
         let root = base.appendingPathComponent("PatchProjects", isDirectory: true)
         try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
         var excludedRoot = root
-        try? excludedRoot.setResourceValues(URLResourceValues(isExcludedFromBackup: true))
+        var excludedValues = URLResourceValues()
+        excludedValues.isExcludedFromBackup = true
+        try? excludedRoot.setResourceValues(excludedValues)
         return root
     }
 
@@ -85,7 +87,9 @@ enum PatchProjectLibrary {
             .appendingPathComponent("Backups", isDirectory: true)
         try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
         var excludedRoot = root
-        try? excludedRoot.setResourceValues(URLResourceValues(isExcludedFromBackup: true))
+        var excludedValues = URLResourceValues()
+        excludedValues.isExcludedFromBackup = true
+        try? excludedRoot.setResourceValues(excludedValues)
         return root
     }
 
