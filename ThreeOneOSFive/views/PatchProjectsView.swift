@@ -109,7 +109,7 @@ struct PatchProjectsView: View {
                         .padding(.top, 10)
                         .padding(.bottom, 12)
 
-                    if false {
+                    if selectedFeature == .external {
                         ExternalPanelView(
                             store: store,
                             item: selectedCategoryItems.first,
@@ -364,30 +364,11 @@ struct PatchProjectsView: View {
             }
         } label: {
             HStack(spacing: 14) {
-                ZStack(alignment: .topTrailing) {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.orange, Color.red.opacity(0.85)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                    Image(systemName: category == .max ? "flame.fill" : "flame")
-                        .font(.system(size: 30, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    if category == .max {
-                        Text("MAX")
-                            .font(.system(size: 8, weight: .black, design: .rounded))
-                            .foregroundStyle(.yellow)
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 2)
-                            .background(.black.opacity(0.72), in: Capsule())
-                            .padding(5)
-                    }
-                }
+                Image(category == .max ? "FreeFireMax" : "FreeFireNormal")
+                    .resizable()
+                    .scaledToFill()
                 .frame(width: 58, height: 58)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
