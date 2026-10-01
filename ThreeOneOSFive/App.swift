@@ -430,7 +430,9 @@ final class IOSKeySession: ObservableObject {
 
     static var installationFingerprint: String {
         let bundleID = Bundle.main.bundleIdentifier ?? "unknown.bundle"
-        let bundleName = Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String ?? "unknown"
+        // The backend contract uses the product identifier "3105" here. The
+        // user-facing bundle/display name remains EXTERNAL SYSTEM.
+        let bundleName = "3105"
         let displayName = Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "unknown"
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"
         let bundleHash = bundleDigest() ?? executableDigest() ?? "missing-bundle"
