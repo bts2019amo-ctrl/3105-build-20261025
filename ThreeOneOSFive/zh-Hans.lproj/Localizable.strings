@@ -750,3 +750,7 @@
 "settings.palette.sky" = "天蓝";
 "settings.palette.magenta" = "洋红";
 "settings.palette.slate" = "板岩灰";
+"settings.wallpaper" = "动态壁纸";
+"settings.wallpaper_footer" = "为登录、选择游戏和补丁页面选择 MotionBGS 壁纸，壁纸会持续循环。";
+"settings.wallpaper_none" = "默认背景";
+"settings.wallpaper_source" = "壁纸由 MotionBGS 提供。视频通过 HTTPS 串流并在应用中循环播放。";

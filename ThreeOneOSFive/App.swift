@@ -639,8 +639,9 @@ struct IOSKeyLoginView: View {
 
     var body: some View {
         ZStack {
-            Color.black
+            AnimatedGlassWallpaper()
                 .ignoresSafeArea()
+                .overlay(Color.black.opacity(0.42))
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {

@@ -750,3 +750,7 @@
 "settings.palette.sky" = "Xanh trời";
 "settings.palette.magenta" = "Đỏ tím";
 "settings.palette.slate" = "Xám xanh";
+"settings.wallpaper" = "Hình nền động";
+"settings.wallpaper_footer" = "Chọn hình nền MotionBGS cho màn hình đăng nhập, chọn game và patch. Hình nền sẽ lặp liên tục.";
+"settings.wallpaper_none" = "Nền mặc định";
+"settings.wallpaper_source" = "Hình nền được cung cấp bởi MotionBGS. Video được phát trực tuyến qua HTTPS và lặp trong ứng dụng.";

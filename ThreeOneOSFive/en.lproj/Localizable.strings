@@ -750,3 +750,7 @@
 "settings.palette.sky" = "Sky";
 "settings.palette.magenta" = "Magenta";
 "settings.palette.slate" = "Slate";
+"settings.wallpaper" = "Animated wallpapers";
+"settings.wallpaper_footer" = "Choose a MotionBGS wallpaper for the login, game selection and patches screens. It loops continuously.";
+"settings.wallpaper_none" = "Default background";
+"settings.wallpaper_source" = "Wallpapers provided by MotionBGS. Videos stream over HTTPS and are looped in the app.";
