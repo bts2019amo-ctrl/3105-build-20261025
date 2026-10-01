@@ -116,6 +116,8 @@ struct ThreeOneOSFiveApp: App {
             .onChange(of: scenePhase) { phase in
                 guard phase == .active, !showOnboarding else { return }
                 guard keySession.isAuthenticated else { return }
+                keySession.validateIntegrityOnForeground()
+                patchStore.reload()
                 Task { await keySession.refresh() }
                 appState.detectSupport()
             }
@@ -342,6 +344,17 @@ final class IOSKeySession: ObservableObject {
         isAuthenticated = false
         errorMessage = "A integridade do aplicativo foi alterada. Instale uma cópia oficial."
         fatalError("Runtime integrity check failed")
+    }
+
+    func validateIntegrityOnForeground() {
+        guard RuntimeIntegrityGuard.passesBundleIdentityCheck(),
+              RuntimeIntegrityGuard.passesLoadedImageCheck(),
+              !RuntimeIntegrityGuard.hasForbiddenBundleArtifact(),
+              RuntimeIntegrityGuard.passesRuntimeSecurityCheck(),
+              RuntimeIntegrityGuard.passesInstallationBaseline() else {
+            invalidateForIntegrityFailure()
+            return
+        }
     }
 
     private func validate(_ key: String, saveOnSuccess: Bool) async {
