@@ -187,51 +187,56 @@ final class PatchProjectStore: ObservableObject {
             var reservedPackageIDs = Set(items.map(\.id))
             var claimedPackageIDs = Set<UUID>()
             for patch in feed.patches {
-                guard patch.updatedAt > PatchProjectLibrary.remoteVersion(for: patch.id),
-                      let category = PatchGameCategory(rawValue: patch.category),
-                      let feature = PatchFeatureCategory(rawValue: patch.feature),
-                      let url = Self.remoteURL(for: patch.fileUrl) else { continue }
-                var (packageData, packageResponse) = try await ephemeralSession.data(from: url)
-                guard let packageResponse = packageResponse as? HTTPURLResponse,
-                      (200..<300).contains(packageResponse.statusCode),
-                      Self.sha256Hex(packageData) == patch.checksumSha256.lowercased() else { continue }
-                let mappedID = PatchProjectLibrary.remotePackageID(for: patch.id)
-                var summary = try PatchPackageCodec.inspect(packageData)
-                var existingURL = items.first(where: { $0.id == mappedID })?.packageURL
-                if (mappedID == nil || (mappedID != nil && claimedPackageIDs.contains(mappedID!)))
-                    && reservedPackageIDs.contains(summary.packageID) {
-                    let decoded = try PatchPackageCodec.decode(packageData, password: nil)
-                    let newID = UUID()
-                    packageData = try PatchPackageCodec.reidentifyPublicPackage(
-                        packageData,
-                        decoded: decoded,
-                        newID: newID
+                do {
+                    guard patch.updatedAt > PatchProjectLibrary.remoteVersion(for: patch.id),
+                          let category = PatchGameCategory(rawValue: patch.category),
+                          let feature = PatchFeatureCategory(rawValue: patch.feature),
+                          let url = Self.remoteURL(for: patch.fileUrl) else { continue }
+                    var (packageData, packageResponse) = try await ephemeralSession.data(from: url)
+                    guard let packageResponse = packageResponse as? HTTPURLResponse,
+                          (200..<300).contains(packageResponse.statusCode),
+                          Self.sha256Hex(packageData) == patch.checksumSha256.lowercased() else { continue }
+                    let mappedID = PatchProjectLibrary.remotePackageID(for: patch.id)
+                    var summary = try PatchPackageCodec.inspect(packageData)
+                    var existingURL = items.first(where: { $0.id == mappedID })?.packageURL
+                    if (mappedID == nil || (mappedID != nil && claimedPackageIDs.contains(mappedID!)))
+                        && reservedPackageIDs.contains(summary.packageID) {
+                        let decoded = try PatchPackageCodec.decode(packageData, password: nil)
+                        let newID = UUID()
+                        packageData = try PatchPackageCodec.reidentifyPublicPackage(
+                            packageData,
+                            decoded: decoded,
+                            newID: newID
+                        )
+                        summary = try PatchPackageCodec.inspect(packageData)
+                        existingURL = nil
+                    }
+                    guard try Self.persistImportedPackage(
+                        data: packageData,
+                        summary: summary,
+                        existingURL: existingURL,
+                        category: category,
+                        feature: feature,
+                        remoteID: patch.id,
+                        remoteVersion: patch.updatedAt,
+                        remoteName: patch.name
+                    ) == nil else { continue }
+                    PatchProjectLibrary.setRemotePackageID(summary.packageID, for: patch.id)
+                    PatchProjectLibrary.setRemoteVersion(patch.updatedAt, for: patch.id)
+                    PatchProjectLibrary.setDisplayName(patch.name, for: summary.packageID)
+                    PatchProjectLibrary.setRemoteIconURL(patch.iconUrl, for: summary.packageID)
+                    PatchProjectLibrary.setRemoteMetadata(
+                        version: patch.version,
+                        changelog: patch.changelog,
+                        checksum: patch.checksumSha256,
+                        for: summary.packageID
                     )
-                    summary = try PatchPackageCodec.inspect(packageData)
-                    existingURL = nil
+                    reservedPackageIDs.insert(summary.packageID)
+                    claimedPackageIDs.insert(summary.packageID)
+                } catch {
+                    // One malformed or incompatible remote package must not hide the rest.
+                    continue
                 }
-                guard try Self.persistImportedPackage(
-                    data: packageData,
-                    summary: summary,
-                    existingURL: existingURL,
-                    category: category,
-                    feature: feature,
-                    remoteID: patch.id,
-                    remoteVersion: patch.updatedAt,
-                    remoteName: patch.name
-                ) == nil else { continue }
-                PatchProjectLibrary.setRemotePackageID(summary.packageID, for: patch.id)
-                PatchProjectLibrary.setRemoteVersion(patch.updatedAt, for: patch.id)
-                PatchProjectLibrary.setDisplayName(patch.name, for: summary.packageID)
-                PatchProjectLibrary.setRemoteIconURL(patch.iconUrl, for: summary.packageID)
-                PatchProjectLibrary.setRemoteMetadata(
-                    version: patch.version,
-                    changelog: patch.changelog,
-                    checksum: patch.checksumSha256,
-                    for: summary.packageID
-                )
-                reservedPackageIDs.insert(summary.packageID)
-                claimedPackageIDs.insert(summary.packageID)
             }
             PatchProjectLibrary.removeRemotePackagesNotInFeed(
                 remoteIDs: Set(feed.patches.map(\.id))
