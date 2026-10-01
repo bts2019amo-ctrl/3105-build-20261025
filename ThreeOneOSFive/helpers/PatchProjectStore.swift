@@ -148,9 +148,12 @@ final class PatchProjectStore: ObservableObject {
     }
 
     private func synchronizeRemoteFeed() async {
-        guard IOSKeySession.runtimeAuthorized,
-              RuntimeIntegrityGuard.passesRuntimeSecurityCheck(),
-              !isBusy else { return }
+        guard IOSKeySession.runtimeAuthorized else {
+            remoteSyncState = .offline
+            lastRemoteSyncError = "A sessão do aplicativo ainda não foi autorizada."
+            return
+        }
+        guard !isBusy else { return }
         remoteSyncState = .syncing
         do {
             var components = URLComponents(
@@ -187,11 +190,10 @@ final class PatchProjectStore: ObservableObject {
                 guard patch.updatedAt > PatchProjectLibrary.remoteVersion(for: patch.id),
                       let category = PatchGameCategory(rawValue: patch.category),
                       let feature = PatchFeatureCategory(rawValue: patch.feature),
-                      let url = URL(string: patch.fileUrl, relativeTo: RemotePatchConfiguration.baseURL)?.absoluteURL else { continue }
+                      let url = Self.remoteURL(for: patch.fileUrl) else { continue }
                 var (packageData, packageResponse) = try await ephemeralSession.data(from: url)
                 guard let packageResponse = packageResponse as? HTTPURLResponse,
                       (200..<300).contains(packageResponse.statusCode),
-                      IOSKeySession.runtimeAuthorized,
                       Self.sha256Hex(packageData) == patch.checksumSha256.lowercased() else { continue }
                 let mappedID = PatchProjectLibrary.remotePackageID(for: patch.id)
                 var summary = try PatchPackageCodec.inspect(packageData)
@@ -242,6 +244,13 @@ final class PatchProjectStore: ObservableObject {
             remoteSyncState = .offline
             lastRemoteSyncError = error.localizedDescription
         }
+    }
+
+    private static func remoteURL(for value: String) -> URL? {
+        if let absolute = URL(string: value), absolute.scheme != nil {
+            return absolute
+        }
+        return URL(string: value, relativeTo: RemotePatchConfiguration.baseURL)?.absoluteURL
     }
 
     private func sendRemoteHeartbeat() async {
