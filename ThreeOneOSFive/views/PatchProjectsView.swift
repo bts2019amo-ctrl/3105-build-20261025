@@ -32,7 +32,7 @@ struct PatchProjectsView: View {
     @State private var simulatedWallpaperDetailGate = OneShotPresentationGate()
     @State private var selectedCategory: PatchGameCategory = PatchProjectLibrary.selectedCategory
     @State private var selectedFeature: PatchFeatureCategory = PatchProjectLibrary.selectedFeatureCategory
-    @State private var expandedPatchID: UUID?
+    @State private var showGameSelection = true
     let onOpenSettings: () -> Void
     let onOpenLogs: () -> Void
 
@@ -99,7 +99,10 @@ struct PatchProjectsView: View {
                 AnimatedGlassWallpaper()
                     .ignoresSafeArea()
 
-                VStack(spacing: 0) {
+                if showGameSelection {
+                    gameSelectionContent
+                } else {
+                    VStack(spacing: 0) {
                     HStack(spacing: 10) {
                         categorySegmentedControl
                         featureMenu
@@ -191,6 +194,7 @@ struct PatchProjectsView: View {
                         .background(Color.clear)
                         }
                     }
+                    }
                 }
             }
             .navigationTitle("")
@@ -214,7 +218,23 @@ struct PatchProjectsView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    ParallaxBrandHeader()
+                    Text(showGameSelection
+                        ? "Configurações"
+                        : language.text(selectedCategory == .max ? "patch.ff_max" : "patch.ff_normal"))
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(.white)
+                }
+                if !showGameSelection {
+                    ToolbarItem(placement: .navigationBarLeading) {
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                showGameSelection = true
+                            }
+                        } label: {
+                            Image(systemName: "chevron.left")
+                        }
+                        .accessibilityLabel("Escolher jogo")
+                    }
                 }
                 AppUtilityToolbar(
                     language: language,
@@ -317,6 +337,116 @@ struct PatchProjectsView: View {
                 consumeExternalImport()
             }
         }
+    }
+
+    private var gameSelectionContent: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 0) {
+                Spacer(minLength: 34)
+
+                AppLogo(size: 76)
+                    .padding(.bottom, 14)
+
+                Text("EXTERNAL SYSTEM")
+                    .font(.system(size: 27, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+
+                Text("Escolha o jogo")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 5)
+
+                VStack(spacing: 14) {
+                    gameSelectionCard(
+                        category: .max,
+                        title: "Free Fire MAX",
+                        subtitle: "Abrir funções"
+                    )
+                    gameSelectionCard(
+                        category: .normal,
+                        title: "Free Fire Normal",
+                        subtitle: "Abrir funções"
+                    )
+                }
+                .padding(.top, 28)
+                .padding(.horizontal, 18)
+
+                Text("Assets carregados somente pelo painel online.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.top, 28)
+                    .padding(.horizontal, 24)
+
+                Spacer(minLength: 48)
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .dynamicTypeSize(.large)
+    }
+
+    private func gameSelectionCard(
+        category: PatchGameCategory,
+        title: String,
+        subtitle: String
+    ) -> some View {
+        Button {
+            selectedCategory = category
+            PatchProjectLibrary.setSelectedCategory(category)
+            withAnimation(.easeInOut(duration: 0.22)) {
+                showGameSelection = false
+            }
+        } label: {
+            HStack(spacing: 14) {
+                ZStack(alignment: .topTrailing) {
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.orange, Color.red.opacity(0.85)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                    Image(systemName: category == .max ? "flame.fill" : "flame")
+                        .font(.system(size: 30, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    if category == .max {
+                        Text("MAX")
+                            .font(.system(size: 8, weight: .black, design: .rounded))
+                            .foregroundStyle(.yellow)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 2)
+                            .background(.black.opacity(0.72), in: Capsule())
+                            .padding(5)
+                    }
+                }
+                .frame(width: 58, height: 58)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(.white)
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 11)
+            .background(Color(red: 0.075, green: 0.075, blue: 0.085), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(Color.white.opacity(0.12), lineWidth: 0.8)
+            }
+        }
+        .buttonStyle(.plain)
     }
 
     private func consumeExternalImport() {
@@ -445,44 +575,31 @@ struct PatchProjectsView: View {
         if item.isLocked {
             Button { store.requestUnlock(for: item) } label: {
                 PatchProjectRow(item: item, language: language)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 14)
+                    .background(Color(red: 0.075, green: 0.075, blue: 0.085), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(Color.white.opacity(0.12), lineWidth: 0.8)
+                    }
             }
             .buttonStyle(.plain)
-            .padding(.vertical, 8)
-            .padding(.horizontal, 10)
-            .liquidGlassCard(cornerRadius: 14, tint: .white, opacity: 0.035)
         } else {
-            VStack(alignment: .leading, spacing: 0) {
-                Button {
-                    withAnimation(.spring(response: 0.42, dampingFraction: 0.78)) {
-                        expandedPatchID = expandedPatchID == item.id ? nil : item.id
-                    }
-                } label: {
-                    HStack(spacing: 10) {
-                        PatchProjectRow(item: item, language: language)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        Image(systemName: expandedPatchID == item.id ? "chevron.up" : "chevron.down")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.tertiary)
-                    }
-                }
-                .buttonStyle(.plain)
+            HStack(spacing: 12) {
+                PatchProjectRow(item: item, language: language)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
-                if expandedPatchID == item.id {
-                    PatchActivationToggle(store: store, item: item)
-                        .padding(.leading, 40)
-                        .padding(.bottom, 8)
-                        .transition(
-                            .asymmetric(
-                                insertion: .scale(scale: 0.92, anchor: .top).combined(with: .opacity),
-                                removal: .scale(scale: 0.96, anchor: .top).combined(with: .opacity)
-                            )
-                        )
-                }
+                PatchActivationToggle(store: store, item: item)
+                    .frame(width: 52, height: 32)
             }
-            .padding(.horizontal, 10)
-            .padding(.top, 7)
-            .padding(.bottom, expandedPatchID == item.id ? 2 : 7)
-            .liquidGlassCard(cornerRadius: 14, tint: .white, opacity: 0.035)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 14)
+            .background(Color(red: 0.075, green: 0.075, blue: 0.085), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(Color.white.opacity(0.12), lineWidth: 0.8)
+            }
         }
     }
 
