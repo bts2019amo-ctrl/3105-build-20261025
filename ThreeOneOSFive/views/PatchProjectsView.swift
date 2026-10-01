@@ -105,64 +105,70 @@ struct PatchProjectsView: View {
                     gameSelectionContent
                 } else {
                     VStack(spacing: 0) {
-                    featureMenu
-                        .padding(.horizontal, 18)
-                        .padding(.top, 10)
-                        .padding(.bottom, 12)
+                        featureMenu
+                            .padding(.horizontal, 18)
+                            .padding(.top, 10)
+                            .padding(.bottom, 12)
 
-                    gameIdentityHeader
-                        .padding(.horizontal, 18)
-                        .padding(.bottom, 12)
+                        gameIdentityHeader
+                            .padding(.horizontal, 18)
+                            .padding(.bottom, 12)
 
-                    if selectedFeature == .external {
-                        ExternalPanelView(
-                            store: store,
-                            item: selectedCategoryItems.first,
-                            onRequestUnlock: { item in store.requestUnlock(for: item) }
-                        )
-                        .padding(.horizontal, 12)
-                        .padding(.bottom, 12)
-                    } else {
-                        if horizontalSizeClass == .regular {
-                            ScrollView(showsIndicators: false) {
-                                VStack(alignment: .leading, spacing: 12) {
-                                    sectionSummary
-                                    if selectedCategoryItems.isEmpty {
-                                        emptyState
-                                    } else {
-                                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 280), spacing: 12)], spacing: 12) {
+                        Group {
+                            if selectedFeature == .external {
+                                ExternalPanelView(
+                                    store: store,
+                                    item: selectedCategoryItems.first,
+                                    onRequestUnlock: { item in store.requestUnlock(for: item) }
+                                )
+                                .padding(.horizontal, 12)
+                                .padding(.bottom, 12)
+                            } else if horizontalSizeClass == .regular {
+                                ScrollView(showsIndicators: false) {
+                                    VStack(alignment: .leading, spacing: 12) {
+                                        sectionSummary
+                                        if selectedCategoryItems.isEmpty {
+                                            emptyState
+                                        } else {
+                                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 280), spacing: 12)], spacing: 12) {
+                                                ForEach(selectedCategoryItems) { item in
+                                                    itemRow(item)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    .padding(.horizontal, 12)
+                                    .padding(.top, 4)
+                                    .padding(.bottom, 24)
+                                }
+                            } else {
+                                ScrollView(showsIndicators: false) {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        if !hasLocalContent && (store.isBusy || isImportingWallpapers) {
+                                            loadingState
+                                        } else if !hasLocalContent || selectedCategoryItems.isEmpty {
+                                            emptyState
+                                        } else {
                                             ForEach(selectedCategoryItems) { item in
                                                 itemRow(item)
                                             }
                                         }
                                     }
+                                    .padding(.horizontal, 18)
+                                    .padding(.top, 4)
+                                    .padding(.bottom, 24)
                                 }
-                                .padding(.horizontal, 12)
-                                .padding(.bottom, 20)
-                            }
-                        } else {
-                            ScrollView(showsIndicators: false) {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    if !hasLocalContent && (store.isBusy || isImportingWallpapers) {
-                                        loadingState
-                                    } else if !hasLocalContent {
-                                        emptyState
-                                    } else if selectedCategoryItems.isEmpty {
-                                        emptyState
-                                    } else {
-                                        ForEach(selectedCategoryItems) { item in
-                                            itemRow(item)
-                                        }
-                                    }
-                                }
-                                .padding(.horizontal, 18)
-                                .padding(.bottom, 20)
                             }
                         }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                     }
-                    patchActionButtons
-                        .padding(.horizontal, 18)
-                        .padding(.bottom, 12)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    .safeAreaInset(edge: .bottom, spacing: 0) {
+                        patchActionButtons
+                            .padding(.horizontal, 18)
+                            .padding(.top, 10)
+                            .padding(.bottom, 8)
+                            .background(.ultraThinMaterial)
                     }
                 }
             }
