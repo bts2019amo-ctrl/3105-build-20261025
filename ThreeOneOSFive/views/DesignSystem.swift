@@ -331,15 +331,15 @@ struct ReferenceToggleStyle: ToggleStyle {
             configuration.label
             Spacer(minLength: 0)
             RoundedRectangle(cornerRadius: 15, style: .continuous)
-                .fill(configuration.isOn ? Color.white : Color.white.opacity(0.12))
-                .frame(width: 48, height: 28)
+                .fill(configuration.isOn ? Color.white : Color.white.opacity(0.32))
+                .frame(width: 54, height: 30)
                 .overlay(alignment: configuration.isOn ? .trailing : .leading) {
                     Circle()
-                        .fill(configuration.isOn ? Color.black : Color.gray.opacity(0.8))
-                        .frame(width: 22, height: 22)
+                        .fill(configuration.isOn ? Color.black : Color.white)
+                        .frame(width: 26, height: 26)
                         .padding(3)
                 }
-                .overlay(RoundedRectangle(cornerRadius: 15).stroke(.white.opacity(0.18), lineWidth: 0.6))
+                .overlay(RoundedRectangle(cornerRadius: 15).stroke(.white.opacity(0.22), lineWidth: 0.6))
                 .animation(.easeOut(duration: 0.18), value: configuration.isOn)
                 .onTapGesture { configuration.isOn.toggle() }
         }

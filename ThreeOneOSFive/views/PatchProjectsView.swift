@@ -103,17 +103,12 @@ struct PatchProjectsView: View {
                     gameSelectionContent
                 } else {
                     VStack(spacing: 0) {
-                    HStack(spacing: 10) {
-                        categorySegmentedControl
-                        featureMenu
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.top, 10)
-                    .padding(.bottom, 8)
+                    patchTabs
+                        .padding(.horizontal, 18)
+                        .padding(.top, 10)
+                        .padding(.bottom, 12)
 
-                    syncStatusBar
-
-                    if selectedFeature == .external {
+                    if false {
                         ExternalPanelView(
                             store: store,
                             item: selectedCategoryItems.first,
@@ -140,60 +135,28 @@ struct PatchProjectsView: View {
                                 .padding(.bottom, 20)
                             }
                         } else {
-                            List {
-                        if !hasLocalContent && (store.isBusy || isImportingWallpapers) {
-                            loadingState
-                                .listRowSeparator(.hidden)
-                        } else if !hasLocalContent {
-                            emptyState
-                                .listRowSeparator(.hidden)
-                            } else {
-                            if !selectedCategoryItems.isEmpty {
-                                Section {
-                                    ForEach(selectedCategoryItems) { item in
-                                        itemRow(item)
-                                            .listRowBackground(Color.clear)
-                                            .listRowSeparator(.hidden)
-                                    }
-                                } header: {
-                                    sectionSummary
-                                }
-                            }
-                        }
-                        if !wallpaperPackages.isEmpty {
-                            Section(language.text("tab.wallpapers")) {
-                                ForEach(wallpaperPackages) { package in
-                                    NavigationLink {
-                                        InstalledWallpaperPackageDetailView(
-                                            package: package,
-                                            onApplied: reloadWallpaperPackages
-                                        )
-                                    } label: {
-                                        wallpaperRow(package)
-                                    }
-                                    .swipeActions(
-                                        edge: .trailing,
-                                        allowsFullSwipe: false
-                                    ) {
-                                        Button(role: .destructive) {
-                                            wallpaperPendingDeletion = package
-                                        } label: {
-                                            Label(
-                                                language.text("common.delete"),
-                                                systemImage: "trash"
-                                            )
+                            ScrollView(showsIndicators: false) {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    if !hasLocalContent && (store.isBusy || isImportingWallpapers) {
+                                        loadingState
+                                    } else if !hasLocalContent {
+                                        emptyState
+                                    } else if selectedCategoryItems.isEmpty {
+                                        emptyState
+                                    } else {
+                                        ForEach(selectedCategoryItems) { item in
+                                            itemRow(item)
                                         }
                                     }
                                 }
+                                .padding(.horizontal, 18)
+                                .padding(.bottom, 20)
                             }
-                            .listSectionSeparator(.hidden)
-                        }
-                        }
-                        .listStyle(.insetGrouped)
-                        .scrollContentBackground(.hidden)
-                        .background(Color.clear)
                         }
                     }
+                    patchActionButtons
+                        .padding(.horizontal, 18)
+                        .padding(.bottom, 12)
                     }
                 }
             }
@@ -393,6 +356,8 @@ struct PatchProjectsView: View {
         Button {
             selectedCategory = category
             PatchProjectLibrary.setSelectedCategory(category)
+            selectedFeature = .external
+            PatchProjectLibrary.setSelectedFeatureCategory(.external)
             withAnimation(.easeInOut(duration: 0.22)) {
                 showGameSelection = false
             }
@@ -574,7 +539,9 @@ struct PatchProjectsView: View {
     private func itemRow(_ item: PatchLibraryItem) -> some View {
         if item.isLocked {
             Button { store.requestUnlock(for: item) } label: {
-                PatchProjectRow(item: item, language: language)
+                Text(language.text("patch.locked_project"))
+                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                    .foregroundStyle(.white)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 14)
@@ -587,11 +554,13 @@ struct PatchProjectsView: View {
             .buttonStyle(.plain)
         } else {
             HStack(spacing: 12) {
-                PatchProjectRow(item: item, language: language)
+                Text(PatchProjectLibrary.displayName(for: item))
+                    .font(.system(size: 16, weight: .regular, design: .rounded))
+                    .foregroundStyle(.white)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                 PatchActivationToggle(store: store, item: item)
-                    .frame(width: 52, height: 32)
+                    .frame(width: 56, height: 32)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 14)
@@ -601,6 +570,75 @@ struct PatchProjectsView: View {
                     .stroke(Color.white.opacity(0.12), lineWidth: 0.8)
             }
         }
+    }
+
+    private var patchTabs: some View {
+        HStack(spacing: 4) {
+            patchTab("APOSTADO", feature: .cache)
+            patchTab("HOLOGRAMAS", feature: .hologram)
+            patchTab("AIMBOTS", feature: .external)
+        }
+        .padding(4)
+        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(Color.white.opacity(0.10), lineWidth: 0.7)
+        }
+    }
+
+    private func patchTab(_ title: String, feature: PatchFeatureCategory) -> some View {
+        Button {
+            selectedFeature = feature
+        } label: {
+            Text(title)
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundStyle(selectedFeature == feature ? .black : .white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 9)
+                .background(
+                    selectedFeature == feature
+                        ? Color.white
+                        : Color.clear,
+                    in: RoundedRectangle(cornerRadius: 9, style: .continuous)
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var patchActionButtons: some View {
+        VStack(spacing: 10) {
+            Button {
+                store.syncNow()
+            } label: {
+                Label("Atualizar", systemImage: "arrow.clockwise")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.black)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 13)
+                    .background(Color.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+            .buttonStyle(.plain)
+
+            Button(action: openSelectedGame) {
+                Label("Abrir jogo", systemImage: "play.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 13)
+                    .background(Color.clear, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .stroke(Color.white.opacity(0.75), lineWidth: 1)
+                    }
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func openSelectedGame() {
+        let scheme = selectedCategory == .max ? "freefiremax" : "freefire"
+        guard let url = URL(string: "\(scheme)://") else { return }
+        UIApplication.shared.open(url)
     }
 
     private var featureTitle: String {
