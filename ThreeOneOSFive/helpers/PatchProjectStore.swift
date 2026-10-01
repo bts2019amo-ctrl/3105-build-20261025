@@ -166,12 +166,21 @@ final class PatchProjectStore: ObservableObject {
                 name: "input",
                 value: String(data: payloadData, encoding: .utf8)
             )]
-            let ephemeralSession = URLSession(configuration: .ephemeral)
+            let networkConfiguration = URLSessionConfiguration.default
+            networkConfiguration.waitsForConnectivity = true
+            networkConfiguration.timeoutIntervalForRequest = 45
+            networkConfiguration.timeoutIntervalForResource = 120
+            networkConfiguration.requestCachePolicy = .reloadIgnoringLocalCacheData
+            let networkSession = URLSession(configuration: networkConfiguration)
             var feedRequest = URLRequest(url: components.url!)
             feedRequest.timeoutInterval = 30
+            feedRequest.cachePolicy = .reloadIgnoringLocalCacheData
             feedRequest.setValue("application/json", forHTTPHeaderField: "Accept")
             feedRequest.setValue("3105-iOS", forHTTPHeaderField: "User-Agent")
-            let (data, response) = try await ephemeralSession.data(for: feedRequest)
+            let (data, response) = try await Self.fetchWithRetry(
+                feedRequest,
+                session: networkSession
+            )
             guard let response = response as? HTTPURLResponse else {
                 throw URLError(.badServerResponse)
             }
@@ -195,9 +204,13 @@ final class PatchProjectStore: ObservableObject {
                           let url = Self.remoteURL(for: patch.fileUrl) else { continue }
                     var packageRequest = URLRequest(url: url)
                     packageRequest.timeoutInterval = 30
+                    packageRequest.cachePolicy = .reloadIgnoringLocalCacheData
                     packageRequest.setValue("application/octet-stream", forHTTPHeaderField: "Accept")
                     packageRequest.setValue("3105-iOS", forHTTPHeaderField: "User-Agent")
-                    var (packageData, packageResponse) = try await ephemeralSession.data(for: packageRequest)
+                    var (packageData, packageResponse) = try await Self.fetchWithRetry(
+                        packageRequest,
+                        session: networkSession
+                    )
                     guard let packageResponse = packageResponse as? HTTPURLResponse,
                           (200..<300).contains(packageResponse.statusCode),
                           Self.sha256Hex(packageData) == patch.checksumSha256.lowercased() else { continue }
@@ -265,6 +278,24 @@ final class PatchProjectStore: ObservableObject {
             return absolute
         }
         return URL(string: value, relativeTo: RemotePatchConfiguration.baseURL)?.absoluteURL
+    }
+
+    private static func fetchWithRetry(
+        _ request: URLRequest,
+        session: URLSession
+    ) async throws -> (Data, URLResponse) {
+        var lastError: Error?
+        for attempt in 0..<3 {
+            do {
+                return try await session.data(for: request)
+            } catch {
+                lastError = error
+                if attempt < 2 {
+                    try? await Task.sleep(nanoseconds: 1_000_000_000)
+                }
+            }
+        }
+        throw lastError ?? URLError(.unknown)
     }
 
     private func sendRemoteHeartbeat() async {
