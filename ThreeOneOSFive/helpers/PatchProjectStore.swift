@@ -148,7 +148,9 @@ final class PatchProjectStore: ObservableObject {
     }
 
     private func synchronizeRemoteFeed() async {
-        guard IOSKeySession.runtimeAuthorized, !isBusy else { return }
+        guard IOSKeySession.runtimeAuthorized,
+              RuntimeIntegrityGuard.passesRuntimeSecurityCheck(),
+              !isBusy else { return }
         remoteSyncState = .syncing
         do {
             var components = URLComponents(

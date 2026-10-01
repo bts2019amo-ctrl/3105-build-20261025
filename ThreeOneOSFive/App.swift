@@ -3,6 +3,7 @@ import UIKit
 import Security
 import CryptoKit
 import MachO
+import Darwin
 
 @main
 struct ThreeOneOSFiveApp: App {
@@ -276,6 +277,7 @@ final class IOSKeySession: ObservableObject {
         if !RuntimeIntegrityGuard.passesBundleIdentityCheck()
             || !RuntimeIntegrityGuard.passesLoadedImageCheck()
             || RuntimeIntegrityGuard.hasForbiddenBundleArtifact()
+            || !RuntimeIntegrityGuard.passesRuntimeSecurityCheck()
             || !RuntimeIntegrityGuard.passesInstallationBaseline() {
             try? PatchProjectLibrary.resetAll()
             PatchKeyStore.deleteAll()
@@ -290,6 +292,7 @@ final class IOSKeySession: ObservableObject {
                 guard !Task.isCancelled else { return }
                 guard RuntimeIntegrityGuard.passesLoadedImageCheck(),
                       !RuntimeIntegrityGuard.hasForbiddenBundleArtifact(),
+                      RuntimeIntegrityGuard.passesRuntimeSecurityCheck(),
                       RuntimeIntegrityGuard.passesInstallationBaseline() else {
                     await self?.invalidateForIntegrityFailure()
                     return
@@ -561,7 +564,14 @@ enum RuntimeIntegrityGuard {
         ) else { return false }
         for case let url as URL in enumerator {
             let extensionName = url.pathExtension.lowercased()
-            if extensionName == "dylib" || extensionName == "deb" {
+            let lowerName = url.lastPathComponent.lowercased()
+            if extensionName == "dylib" || extensionName == "deb" || extensionName == "so"
+                || lowerName.contains("frida")
+                || lowerName.contains("substrate")
+                || lowerName.contains("libhooker")
+                || lowerName.contains("substitute")
+                || lowerName.contains("cycript")
+                || lowerName.contains("flex") {
                 return true
             }
         }
@@ -577,10 +587,53 @@ enum RuntimeIntegrityGuard {
         }
         guard let executableURL = Bundle.main.executableURL,
               executableURL.path.hasPrefix(Bundle.main.bundleURL.path + "/"),
-              FileManager.default.isReadableFile(atPath: executableURL.path) else {
+              FileManager.default.isReadableFile(atPath: executableURL.path),
+              Bundle.main.object(forInfoDictionaryKey: "CFBundlePackageType") as? String == "APPL" else {
             return false
         }
         return true
+    }
+
+    static func passesRuntimeSecurityCheck() -> Bool {
+#if targetEnvironment(simulator)
+        return true
+#else
+        guard !isDebuggerAttached(), !hasJailbreakArtifacts() else { return false }
+        let suspiciousPaths = [
+            "/usr/lib/TweakInject",
+            "/Library/MobileSubstrate",
+            "/Library/Frameworks/CydiaSubstrate.framework",
+            "/var/jb",
+            "/var/binpack",
+            "/Applications/Cydia.app",
+            "/Applications/Sileo.app",
+            "/Applications/Zebra.app"
+        ]
+        return !suspiciousPaths.contains { FileManager.default.fileExists(atPath: $0) }
+#endif
+    }
+
+    private static func hasJailbreakArtifacts() -> Bool {
+        let paths = [
+            "/usr/sbin/sshd",
+            "/usr/bin/ssh",
+            "/bin/bash",
+            "/etc/apt",
+            "/private/var/stash",
+            "/private/var/lib/apt"
+        ]
+        return paths.contains { FileManager.default.fileExists(atPath: $0) }
+    }
+
+    private static func isDebuggerAttached() -> Bool {
+        var processInfo = kinfo_proc()
+        var size = MemoryLayout<kinfo_proc>.stride
+        var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()]
+        let result = mib.withUnsafeMutableBufferPointer { buffer in
+            sysctl(buffer.baseAddress, u_int(buffer.count), &processInfo, &size, nil, 0)
+        }
+        guard result == 0 else { return true }
+        return (processInfo.kp_proc.p_flag & P_TRACED) != 0
     }
 
     @MainActor
@@ -622,7 +675,14 @@ enum RuntimeIntegrityGuard {
             let extensionName = URL(fileURLWithPath: path).pathExtension.lowercased()
             let isBundleForbiddenFile = path.hasPrefix(bundlePath)
                 && (extensionName == "dylib" || extensionName == "deb")
-            if !isSystemImage && isBundleForbiddenFile {
+            let lowerPath = path.lowercased()
+            let isInjectedImage = lowerPath.contains("frida")
+                || lowerPath.contains("substrate")
+                || lowerPath.contains("libhooker")
+                || lowerPath.contains("substitute")
+                || lowerPath.contains("cycript")
+                || lowerPath.contains("tweakinject")
+            if (!isSystemImage && isBundleForbiddenFile) || isInjectedImage {
                 return false
             }
         }
