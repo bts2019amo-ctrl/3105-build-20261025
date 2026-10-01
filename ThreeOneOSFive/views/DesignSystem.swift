@@ -76,13 +76,20 @@ struct MotionBGSVideoBackground: View {
     }
 
     var body: some View {
-        VideoPlayer(player: model.player)
-            .aspectRatio(contentMode: .fill)
-            .clipped()
-            .allowsHitTesting(false)
-            .onAppear { model.player.play() }
-            .onDisappear { model.player.pause() }
-            .accessibilityHidden(true)
+        GeometryReader { proxy in
+            let portraitWidth = proxy.size.height * (16.0 / 9.0)
+            VideoPlayer(player: model.player)
+                .frame(width: max(proxy.size.width, portraitWidth), height: proxy.size.height)
+                .scaleEffect(1.08)
+                .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
+                .clipped()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .clipped()
+        .allowsHitTesting(false)
+        .onAppear { model.player.play() }
+        .onDisappear { model.player.pause() }
+        .accessibilityHidden(true)
     }
 }
 
