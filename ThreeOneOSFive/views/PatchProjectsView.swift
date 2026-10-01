@@ -32,6 +32,7 @@ struct PatchProjectsView: View {
     @State private var simulatedWallpaperDetailGate = OneShotPresentationGate()
     @State private var selectedCategory: PatchGameCategory = PatchProjectLibrary.selectedCategory
     @State private var selectedFeature: PatchFeatureCategory = PatchProjectLibrary.selectedFeatureCategory
+    @State private var showAllFeatures = true
     @State private var showGameSelection = true
     @State private var isRefreshing = false
     @State private var launchMessage: String?
@@ -83,7 +84,7 @@ struct PatchProjectsView: View {
     private var selectedCategoryItems: [PatchLibraryItem] {
         store.items.filter {
             PatchProjectLibrary.category(for: $0) == selectedCategory
-                && PatchProjectLibrary.featureCategory(for: $0) == selectedFeature
+                && (showAllFeatures || PatchProjectLibrary.featureCategory(for: $0) == selectedFeature)
         }
     }
 
@@ -114,8 +115,10 @@ struct PatchProjectsView: View {
                             .padding(.horizontal, 18)
                             .padding(.bottom, 12)
 
+                        syncStatusBar
+
                         Group {
-                            if selectedFeature == .external {
+                            if !showAllFeatures && selectedFeature == .external {
                                 ExternalPanelView(
                                     store: store,
                                     item: selectedCategoryItems.first,
@@ -188,6 +191,7 @@ struct PatchProjectsView: View {
             }
             .onChange(of: selectedFeature) { feature in
                 PatchProjectLibrary.setSelectedFeatureCategory(feature)
+                showAllFeatures = false
             }
             .onAppear {
                 store.startRemoteSync()
@@ -376,8 +380,7 @@ struct PatchProjectsView: View {
         Button {
             selectedCategory = category
             PatchProjectLibrary.setSelectedCategory(category)
-            selectedFeature = .external
-            PatchProjectLibrary.setSelectedFeatureCategory(.external)
+            showAllFeatures = true
             withAnimation(.easeInOut(duration: 0.22)) {
                 showGameSelection = false
             }
@@ -660,7 +663,7 @@ struct PatchProjectsView: View {
     }
 
     private var featureTitle: String {
-        language.text("patch.feature." + selectedFeature.rawValue)
+        language.text(showAllFeatures ? "patch.feature.all" : "patch.feature." + selectedFeature.rawValue)
     }
 
     private var sectionSummary: some View {
@@ -741,6 +744,9 @@ struct PatchProjectsView: View {
 
     private var featureMenu: some View {
         Menu {
+            Button { showAllFeatures = true } label: {
+                menuChoice("patch.feature.all", showAllFeatures)
+            }
             Button { selectedFeature = .cache } label: { menuChoice("patch.feature.cache", selectedFeature == .cache) }
             Button { selectedFeature = .avatar } label: { menuChoice("patch.feature.avatar", selectedFeature == .avatar) }
             Button { selectedFeature = .hologram } label: { menuChoice("patch.feature.hologram", selectedFeature == .hologram) }
