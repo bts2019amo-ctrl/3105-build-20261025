@@ -116,6 +116,12 @@
 "patch.category" = "Patch category";
 "patch.feature" = "Patch type";
 "patch.feature.cache" = "Cache";
+"patch.sync.title" = "Patch synchronization";
+"patch.sync.waiting" = "Waiting to synchronize";
+"patch.sync.syncing" = "Synchronizing…";
+"patch.sync.updated" = "Feed updated";
+"patch.sync.partial" = "Feed received partially";
+"patch.sync.offline" = "No connection";
 "patch.feature.avatar" = "Avatar";
 "patch.feature.hologram" = "Hologram";
 "patch.feature.external" = "External";

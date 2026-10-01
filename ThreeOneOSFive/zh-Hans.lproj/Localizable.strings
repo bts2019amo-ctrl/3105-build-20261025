@@ -116,6 +116,12 @@
 "patch.category" = "补丁分类";
 "patch.feature" = "补丁类型";
 "patch.feature.cache" = "缓存";
+"patch.sync.title" = "补丁同步";
+"patch.sync.waiting" = "等待同步";
+"patch.sync.syncing" = "正在同步…";
+"patch.sync.updated" = "源已更新";
+"patch.sync.partial" = "已接收部分源";
+"patch.sync.offline" = "无网络连接";
 "patch.feature.avatar" = "头像";
 "patch.feature.hologram" = "全息";
 "patch.feature.external" = "External";

@@ -32,7 +32,7 @@ struct PatchProjectsView: View {
     @State private var simulatedWallpaperDetailGate = OneShotPresentationGate()
     @State private var selectedCategory: PatchGameCategory = PatchProjectLibrary.selectedCategory
     @State private var selectedFeature: PatchFeatureCategory = PatchProjectLibrary.selectedFeatureCategory
-    @State private var showAllFeatures = true
+    @State private var showAllFeatures = false
     @State private var showGameSelection = true
     @State private var isRefreshing = false
     @State private var launchMessage: String?
@@ -114,8 +114,6 @@ struct PatchProjectsView: View {
                         gameIdentityHeader
                             .padding(.horizontal, 18)
                             .padding(.bottom, 12)
-
-                        syncStatusBar
 
                         Group {
                             if !showAllFeatures && selectedFeature == .external {
@@ -380,7 +378,7 @@ struct PatchProjectsView: View {
         Button {
             selectedCategory = category
             PatchProjectLibrary.setSelectedCategory(category)
-            showAllFeatures = true
+            showAllFeatures = false
             withAnimation(.easeInOut(duration: 0.22)) {
                 showGameSelection = false
             }
@@ -663,7 +661,7 @@ struct PatchProjectsView: View {
     }
 
     private var featureTitle: String {
-        language.text(showAllFeatures ? "patch.feature.all" : "patch.feature." + selectedFeature.rawValue)
+        language.text("patch.feature." + selectedFeature.rawValue)
     }
 
     private var sectionSummary: some View {
@@ -744,9 +742,6 @@ struct PatchProjectsView: View {
 
     private var featureMenu: some View {
         Menu {
-            Button { showAllFeatures = true } label: {
-                menuChoice("patch.feature.all", showAllFeatures)
-            }
             Button { selectedFeature = .cache } label: { menuChoice("patch.feature.cache", selectedFeature == .cache) }
             Button { selectedFeature = .avatar } label: { menuChoice("patch.feature.avatar", selectedFeature == .avatar) }
             Button { selectedFeature = .hologram } label: { menuChoice("patch.feature.hologram", selectedFeature == .hologram) }
@@ -760,53 +755,6 @@ struct PatchProjectsView: View {
                 .padding(.vertical, 9)
                 .background(Color.white.opacity(0.07), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(.white.opacity(0.1), lineWidth: 0.7))
-        }
-    }
-
-    private var syncStatusBar: some View {
-        Button { store.syncNow() } label: {
-            HStack(spacing: 8) {
-                Circle()
-                    .fill(syncColor)
-                    .frame(width: 7, height: 7)
-                    .shadow(color: syncColor.opacity(0.7), radius: 4)
-                Text(syncTitle)
-                    .font(.caption.weight(.semibold))
-                Spacer()
-                if let date = store.lastRemoteSyncAt {
-                    Text(date, style: .time)
-                        .font(.caption2.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                }
-                Image(systemName: "arrow.clockwise")
-                    .font(.caption.weight(.bold))
-            }
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .liquidGlassCard(cornerRadius: 14, tint: AppTheme.accent, opacity: 0.04)
-        }
-        .buttonStyle(.plain)
-        .padding(.horizontal, 12)
-        .padding(.bottom, 5)
-    }
-
-    private var syncTitle: String {
-        switch store.remoteSyncState {
-        case .idle: return "Aguardando sincronização"
-        case .syncing: return "Sincronizando…"
-        case .online:
-            return store.lastRemoteSyncError == nil ? "Feed atualizado" : "Feed recebido parcialmente"
-        case .offline: return "Sem conexão · toque para tentar"
-        }
-    }
-
-    private var syncColor: Color {
-        switch store.remoteSyncState {
-        case .online: return .green
-        case .syncing: return .orange
-        case .offline: return .red
-        case .idle: return .secondary
         }
     }
 

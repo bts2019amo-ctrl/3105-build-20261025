@@ -4,6 +4,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.appLanguage) private var language
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var patchStore: PatchProjectStore
     @AppStorage(AppLanguage.storageKey) private var languageCode = AppLanguage.english.rawValue
     @AppStorage(AppTheme.accentPaletteStorageKey)
     private var accentPalette = AppTheme.defaultAccentPalette
@@ -37,6 +38,7 @@ struct SettingsView: View {
                 ScrollView {
                     VStack(spacing: 16) {
                         profileCard
+                        remoteSyncCard
                         languageCard
                         paletteCard
                         appearanceEditorCard
@@ -79,6 +81,64 @@ struct SettingsView: View {
         }
         .padding(18)
         .glassCard()
+    }
+
+    private var remoteSyncCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            settingsCardHeader("patch.sync.title", systemImage: "arrow.triangle.2.circlepath")
+            HStack(spacing: 10) {
+                Circle()
+                    .fill(syncColor)
+                    .frame(width: 9, height: 9)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(syncTitle)
+                        .font(.subheadline.weight(.semibold))
+                    if let lastSync = patchStore.lastRemoteSyncAt {
+                        Text(lastSync, style: .time)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                Spacer()
+                Button { patchStore.syncNow() } label: {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.headline.weight(.semibold))
+                        .padding(10)
+                        .background(AppTheme.accent.opacity(0.14), in: Circle())
+                }
+                .buttonStyle(.plain)
+                .disabled(patchStore.remoteSyncState == .syncing)
+            }
+            if let error = patchStore.lastRemoteSyncError {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(18)
+        .glassCard()
+    }
+
+    private var syncTitle: String {
+        switch patchStore.remoteSyncState {
+        case .idle: return language.text("patch.sync.waiting")
+        case .syncing: return language.text("patch.sync.syncing")
+        case .online:
+            return patchStore.lastRemoteSyncError == nil
+                ? language.text("patch.sync.updated")
+                : language.text("patch.sync.partial")
+        case .offline: return language.text("patch.sync.offline")
+        }
+    }
+
+    private var syncColor: Color {
+        switch patchStore.remoteSyncState {
+        case .online: return .green
+        case .syncing: return .orange
+        case .offline: return .red
+        case .idle: return .secondary
+        }
     }
 
     private var languageCard: some View {

@@ -116,6 +116,12 @@
 "patch.category" = "Nhóm patch";
 "patch.feature" = "Loại patch";
 "patch.feature.cache" = "Bộ nhớ đệm";
+"patch.sync.title" = "Đồng bộ bản vá";
+"patch.sync.waiting" = "Đang chờ đồng bộ";
+"patch.sync.syncing" = "Đang đồng bộ…";
+"patch.sync.updated" = "Đã cập nhật nguồn";
+"patch.sync.partial" = "Đã nhận một phần nguồn";
+"patch.sync.offline" = "Không có kết nối";
 "patch.feature.avatar" = "Avatar";
 "patch.feature.hologram" = "Hologram";
 "patch.feature.external" = "External";
