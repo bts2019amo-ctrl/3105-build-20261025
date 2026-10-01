@@ -632,6 +632,7 @@ enum RuntimeIntegrityGuard {
 }
 
 struct IOSKeyLoginView: View {
+    @Environment(\.appLanguage) private var language
     @ObservedObject var session: IOSKeySession
     @State private var key = ""
     @State private var isKeyVisible = false
@@ -648,11 +649,11 @@ struct IOSKeyLoginView: View {
                     AppLogo(size: 78)
                         .padding(.bottom, 20)
 
-                    Text("EXTERNAL SYSTEM")
+                    Text(language.text("brand.external_system"))
                         .font(.system(size: 30, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
 
-                    Text("Digite sua key para acessar o aplicativo.")
+                    Text(language.text("login.subtitle"))
                         .font(.system(size: 17, weight: .regular, design: .rounded))
                         .foregroundStyle(Color.white.opacity(0.72))
                         .multilineTextAlignment(.center)
@@ -668,9 +669,9 @@ struct IOSKeyLoginView: View {
 
                             Group {
                                 if isKeyVisible {
-                                    TextField("Key de acesso", text: $key)
+                                    TextField(language.text("login.key_placeholder"), text: $key)
                                 } else {
-                                    SecureField("Key de acesso", text: $key)
+                                    SecureField(language.text("login.key_placeholder"), text: $key)
                                 }
                             }
                             .font(.system(size: 17, weight: .regular, design: .rounded))
@@ -687,7 +688,7 @@ struct IOSKeyLoginView: View {
                                     .frame(width: 28, height: 36)
                             }
                             .buttonStyle(.plain)
-                            .accessibilityLabel(isKeyVisible ? "Ocultar key" : "Mostrar key")
+                            .accessibilityLabel(language.text(isKeyVisible ? "login.hide_key" : "login.show_key"))
                         }
                         .padding(.horizontal, 18)
                         .frame(height: 56)
@@ -706,7 +707,7 @@ struct IOSKeyLoginView: View {
                                     ProgressView().tint(Color(red: 0.20, green: 0.24, blue: 0.28))
                                 } else {
                                     HStack(spacing: 12) {
-                                        Text("ENTRAR")
+                                        Text(language.text("login.enter"))
                                         Image(systemName: "arrow.right")
                                     }
                                     .font(.system(size: 18, weight: .bold, design: .rounded))
@@ -724,7 +725,7 @@ struct IOSKeyLoginView: View {
                                 key = clipboardKey
                             }
                         } label: {
-                            Label("Colar key", systemImage: "doc.on.clipboard")
+                            Label(language.text("login.paste_key"), systemImage: "doc.on.clipboard")
                                 .font(.system(size: 18, weight: .semibold, design: .rounded))
                                 .foregroundStyle(.white)
                         }
@@ -734,7 +735,7 @@ struct IOSKeyLoginView: View {
                             session.logout()
                             key = ""
                         } label: {
-                            Label("LIMPAR TUDO DO EXTERNAL", systemImage: "trash")
+                            Label(language.text("login.clear_external"), systemImage: "trash")
                                 .font(.system(size: 16, weight: .semibold, design: .rounded))
                                 .foregroundStyle(.white)
                         }
@@ -753,7 +754,7 @@ struct IOSKeyLoginView: View {
                     .padding(.top, 36)
                     .padding(.horizontal, 28)
 
-                    Label("Versão oficial EXTERNAL SYSTEM", systemImage: "checkmark.shield.fill")
+                    Label(language.text("login.official_version"), systemImage: "checkmark.shield.fill")
                         .font(.system(size: 15, weight: .regular, design: .rounded))
                         .foregroundStyle(Color.white.opacity(0.55))
                         .padding(.top, 34)

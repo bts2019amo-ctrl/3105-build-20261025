@@ -72,6 +72,11 @@
     <string>1.1.1</string>
     <key>LSRequiresIPhoneOS</key>
     <true/>
+    <key>LSApplicationQueriesSchemes</key>
+    <array>
+        <string>freefire</string>
+        <string>freefiremax</string>
+    </array>
     <key>NSPhotoLibraryUsageDescription</key>
     <string>3105 needs access to photos for wallpaper customization.</string>
     <key>NSDocumentsFolderUsageDescription</key>

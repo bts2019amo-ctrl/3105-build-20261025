@@ -34,6 +34,7 @@ struct PatchProjectsView: View {
     @State private var selectedFeature: PatchFeatureCategory = PatchProjectLibrary.selectedFeatureCategory
     @State private var showGameSelection = true
     @State private var isRefreshing = false
+    @State private var launchMessage: String?
     let onOpenSettings: () -> Void
     let onOpenLogs: () -> Void
 
@@ -164,6 +165,14 @@ struct PatchProjectsView: View {
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
+            .alert(language.text("patch.open_game"), isPresented: Binding(
+                get: { launchMessage != nil },
+                set: { if !$0 { launchMessage = nil } }
+            )) {
+                Button(language.text("common.ok"), role: .cancel) { launchMessage = nil }
+            } message: {
+                Text(launchMessage ?? "")
+            }
             .onChange(of: selectedCategory) { category in
                 PatchProjectLibrary.setSelectedCategory(category)
             }
@@ -311,11 +320,11 @@ struct PatchProjectsView: View {
                 AppLogo(size: 76)
                     .padding(.bottom, 14)
 
-                Text("EXTERNAL SYSTEM")
+                Text(language.text("brand.external_system"))
                     .font(.system(size: 27, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
 
-                Text("Escolha o jogo")
+                Text(language.text("patch.choose_game"))
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.secondary)
                     .padding(.top, 5)
@@ -335,7 +344,7 @@ struct PatchProjectsView: View {
                 .padding(.top, 28)
                 .padding(.horizontal, 18)
 
-                Text("Assets carregados somente pelo painel online.")
+                Text(language.text("patch.assets_notice"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -572,7 +581,7 @@ struct PatchProjectsView: View {
                 HStack(spacing: 8) {
                     Image(systemName: "arrow.clockwise")
                         .rotationEffect(.degrees(isRefreshing ? 360 : 0))
-                    Text(isRefreshing ? "Atualizando" : "Atualizar")
+                    Text(language.text(isRefreshing ? "patch.refreshing" : "patch.refresh"))
                 }
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.black)
@@ -584,7 +593,7 @@ struct PatchProjectsView: View {
             .disabled(isRefreshing)
 
             Button(action: openSelectedGame) {
-                Label("Abrir jogo", systemImage: "play.fill")
+                Label(language.text("patch.open_game"), systemImage: "play.fill")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
@@ -602,7 +611,17 @@ struct PatchProjectsView: View {
     private func openSelectedGame() {
         let scheme = selectedCategory == .max ? "freefiremax" : "freefire"
         guard let url = URL(string: "\(scheme)://") else { return }
-        UIApplication.shared.open(url)
+        guard UIApplication.shared.canOpenURL(url) else {
+            launchMessage = language.text(
+                selectedCategory == .max
+                    ? "patch.game_not_installed_max"
+                    : "patch.game_not_installed_normal"
+            )
+            return
+        }
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.78)) {
+            UIApplication.shared.open(url)
+        }
     }
 
     private var featureTitle: String {
@@ -788,6 +807,15 @@ private enum ExternalPanelTab: String, CaseIterable, Identifiable {
         }
     }
 
+    func localizedTitle(language: AppLanguage) -> String {
+        switch self {
+        case .aim: return language.text("external.aimbot")
+        case .esp: return language.text("external.player_esp")
+        case .general: return language.text("external.general")
+        case .xray: return language.text("external.xray")
+        }
+    }
+
     var icon: String {
         switch self {
         case .aim: return "scope"
@@ -838,11 +866,11 @@ private struct ExternalPanelView: View {
         .background(Color.black.opacity(0.82), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).stroke(Color.red.opacity(0.25), lineWidth: 1))
         .shadow(color: .black.opacity(0.35), radius: 20, y: 10)
-        .alert("EXTERNAL", isPresented: Binding(
+        .alert(language.text("external.title"), isPresented: Binding(
             get: { actionMessage != nil },
             set: { if !$0 { actionMessage = nil } }
         )) {
-            Button("OK", role: .cancel) { actionMessage = nil }
+                Button(language.text("common.ok"), role: .cancel) { actionMessage = nil }
         } message: {
             Text(actionMessage ?? "")
         }
@@ -852,16 +880,16 @@ private struct ExternalPanelView: View {
         HStack(spacing: 12) {
             AppLogo(size: 44)
             VStack(alignment: .leading, spacing: 2) {
-                Text("EXTERNAL")
+                Text(language.text("external.title"))
                     .font(.headline.weight(.black))
                     .tracking(1.2)
-                Text("PAINEL EXTERNO")
+                Text(language.text("external.panel"))
                     .font(.caption2.weight(.bold))
                     .foregroundStyle(.gray)
                     .tracking(1.3)
             }
             Spacer()
-            Label("ONLINE", systemImage: "circle.fill")
+            Label(language.text("external.online"), systemImage: "circle.fill")
                 .font(.caption.weight(.bold))
                 .foregroundStyle(.green)
         }
@@ -876,7 +904,7 @@ private struct ExternalPanelView: View {
                     VStack(spacing: 5) {
                         Image(systemName: tab.icon)
                             .font(.system(size: 17, weight: .semibold))
-                        Text(tab.title)
+                        Text(tab.localizedTitle(language: language))
                             .font(.system(size: 8, weight: .bold))
                     }
                     .foregroundStyle(selectedTab == tab ? .black : .gray)
@@ -893,28 +921,28 @@ private struct ExternalPanelView: View {
     private var content: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 12) {
-                Text(selectedTab == .aim ? "AIMBOT" : selectedTab == .esp ? "PLAYER ESP" : selectedTab.title)
+                Text(selectedTab == .aim ? language.text("external.aimbot") : selectedTab == .esp ? language.text("external.player_esp") : selectedTab.localizedTitle(language: language))
                     .font(.title3.weight(.black))
                     .foregroundStyle(.white)
                 if selectedTab == .aim {
-                    toggleRow("Aimbot ao disparar", icon: "scope", isOn: $aimOnFire)
-                    toggleRow("Priorizar cabeça", icon: "person.crop.circle.badge.target", isOn: $prioritizeHead)
-                    toggleRow("Ajuste fino da mira", icon: "keyboard", isOn: $fineAim)
-                    toggleRow("Cura rápida", icon: "cross.case.fill", isOn: $quickHeal)
-                    sliderCard("Intervalo de tiro", icon: "bolt.fill", value: $shotInterval, range: 0.65...1.0, labels: ["NORMAL", "90%", "85%", "75%", "65%"])
+                    toggleRow(language.text("external.aim_fire"), icon: "scope", isOn: $aimOnFire)
+                    toggleRow(language.text("external.prioritize_head"), icon: "person.crop.circle.badge.target", isOn: $prioritizeHead)
+                    toggleRow(language.text("external.fine_aim"), icon: "keyboard", isOn: $fineAim)
+                    toggleRow(language.text("external.quick_heal"), icon: "cross.case.fill", isOn: $quickHeal)
+                    sliderCard(language.text("external.shot_interval"), icon: "bolt.fill", value: $shotInterval, range: 0.65...1.0, labels: ["NORMAL", "90%", "85%", "75%", "65%"])
                 } else if selectedTab == .esp {
-                    toggleRow("Caixa", icon: "square", isOn: $boxESP)
-                    toggleRow("Vida", icon: "heart.fill", isOn: $healthESP)
-                    toggleRow("Nome", icon: "person.text.rectangle", isOn: $nameESP)
-                    toggleRow("Distância", icon: "ruler", isOn: $distanceESP)
-                    toggleRow("Direção", icon: "location.north.fill", isOn: $directionESP)
-                    toggleRow("Marcar inimigos", icon: "figure.stand", isOn: $markEnemies)
-                    sliderCard("Distância dos efeitos", icon: "ruler.fill", value: $effectDistance, range: 20...240, labels: ["20 m", "80 m", "120 m", "180 m", "240 m"])
+                    toggleRow(language.text("external.box"), icon: "square", isOn: $boxESP)
+                    toggleRow(language.text("external.health"), icon: "heart.fill", isOn: $healthESP)
+                    toggleRow(language.text("external.name"), icon: "person.text.rectangle", isOn: $nameESP)
+                    toggleRow(language.text("external.distance"), icon: "ruler", isOn: $distanceESP)
+                    toggleRow(language.text("external.direction"), icon: "location.north.fill", isOn: $directionESP)
+                    toggleRow(language.text("external.mark_enemies"), icon: "figure.stand", isOn: $markEnemies)
+                    sliderCard(language.text("external.effect_distance"), icon: "ruler.fill", value: $effectDistance, range: 20...240, labels: ["20 m", "80 m", "120 m", "180 m", "240 m"])
                 } else {
-                    toggleRow("Modo seguro", icon: "shield.fill", isOn: .constant(true))
-                    toggleRow("Otimização externa", icon: "wand.and.stars", isOn: .constant(true))
-                    toggleRow("Proteção de sessão", icon: "lock.shield.fill", isOn: .constant(true))
-                    Text("Selecione MIRA ou ESP para ajustar os recursos do painel.")
+                    toggleRow(language.text("external.safe_mode"), icon: "shield.fill", isOn: .constant(true))
+                    toggleRow(language.text("external.optimization"), icon: "wand.and.stars", isOn: .constant(true))
+                    toggleRow(language.text("external.session_protection"), icon: "lock.shield.fill", isOn: .constant(true))
+                    Text(language.text("external.select_aim_esp"))
                         .font(.caption)
                         .foregroundStyle(.gray)
                         .padding(.top, 5)
@@ -927,7 +955,7 @@ private struct ExternalPanelView: View {
     private var footer: some View {
         HStack(spacing: 10) {
             Button { resetControls() } label: {
-                Label("LIMPAR DADOS", systemImage: "trash.fill")
+                Label(language.text("external.clear_data"), systemImage: "trash.fill")
                     .font(.caption.weight(.bold))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
@@ -936,7 +964,7 @@ private struct ExternalPanelView: View {
             }
             .buttonStyle(.plain)
             Button { applySelectedPatch() } label: {
-                Label(isWorking ? "APLICANDO…" : "INICIAR", systemImage: "play.fill")
+                Label(language.text(isWorking ? "external.applying" : "external.start"), systemImage: "play.fill")
                     .font(.caption.weight(.black))
                     .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)

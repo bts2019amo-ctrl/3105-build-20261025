@@ -194,6 +194,7 @@ struct AnimatedGlassWallpaper: View {
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
             let phase = context.date.timeIntervalSinceReferenceDate * AppTheme.animationSpeed
+            let intensity = max(0.65, min(2.0, AppTheme.glassOpacity / AppTheme.defaultGlassOpacity))
             ZStack {
                 LinearGradient(
                     colors: [
@@ -206,19 +207,19 @@ struct AnimatedGlassWallpaper: View {
                 )
 
                 blob(
-                    color: AppTheme.accent.opacity(0.12),
+                    color: AppTheme.accent.opacity(min(0.28, 0.12 * intensity)),
                     size: 340,
                     x: sin(phase * 0.34) * 125,
                     y: cos(phase * 0.28) * 155
                 )
                 blob(
-                    color: Color.white.opacity(0.045),
+                    color: Color.white.opacity(min(0.12, 0.045 * intensity)),
                     size: 280,
                     x: cos(phase * 0.24) * 155,
                     y: sin(phase * 0.38) * 175
                 )
                 blob(
-                    color: AppTheme.accent.opacity(0.07),
+                    color: AppTheme.accent.opacity(min(0.18, 0.07 * intensity)),
                     size: 190,
                     x: sin(phase * 0.20 + 2) * 150,
                     y: cos(phase * 0.30 + 1) * 110

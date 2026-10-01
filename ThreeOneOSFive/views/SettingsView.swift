@@ -141,12 +141,12 @@ struct SettingsView: View {
 
     private var appearanceEditorCard: some View {
         VStack(alignment: .leading, spacing: 16) {
-            settingsCardHeader("Aparência avançada", systemImage: "wand.and.stars")
-            appearanceSlider("Transparência do vidro", value: $glassOpacity, range: 0.05...0.30, format: "%.0f%%")
-            appearanceSlider("Desfoque do fundo", value: $wallpaperBlur, range: 8...46, format: "%.0f")
-            appearanceSlider("Velocidade da animação", value: $animationSpeed, range: 0.4...2.0, format: "%.1fx")
-            appearanceSlider("Saturação", value: $saturation, range: 0.6...1.8, format: "%.1f")
-            Button("Restaurar aparência padrão") {
+            settingsCardHeader("settings.advanced_appearance", systemImage: "wand.and.stars")
+            appearanceSlider("settings.glass_transparency", value: $glassOpacity, range: 0.05...0.30, format: "%.0f%%")
+            appearanceSlider("settings.background_blur", value: $wallpaperBlur, range: 8...46, format: "%.0f")
+            appearanceSlider("settings.animation_speed", value: $animationSpeed, range: 0.4...2.0, format: "%.1fx")
+            appearanceSlider("settings.saturation", value: $saturation, range: 0.6...1.8, format: "%.1f")
+            Button(language.text("settings.restore_appearance")) {
                 glassOpacity = AppTheme.defaultGlassOpacity
                 wallpaperBlur = AppTheme.defaultWallpaperBlur
                 animationSpeed = AppTheme.defaultAnimationSpeed
@@ -167,7 +167,7 @@ struct SettingsView: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text(title).font(.subheadline)
+                Text(language.text(title)).font(.subheadline)
                 Spacer()
                 Text(String(format: format, value.wrappedValue))
                     .font(.caption.monospacedDigit())
