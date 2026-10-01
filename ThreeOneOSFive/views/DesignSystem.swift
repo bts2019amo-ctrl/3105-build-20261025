@@ -58,7 +58,6 @@ private final class MotionBGSLoopingPlayer: ObservableObject {
 
     init(url: URL?) {
         player = AVQueuePlayer()
-        super.init()
         guard let url else { return }
         let item = AVPlayerItem(url: url)
         looper = AVPlayerLooper(player: player, templateItem: item)
