@@ -611,31 +611,10 @@ enum RuntimeIntegrityGuard {
 #if targetEnvironment(simulator)
         return true
 #else
-        guard !isDebuggerAttached(), !hasJailbreakArtifacts() else { return false }
-        let suspiciousPaths = [
-            "/usr/lib/TweakInject",
-            "/Library/MobileSubstrate",
-            "/Library/Frameworks/CydiaSubstrate.framework",
-            "/var/jb",
-            "/var/binpack",
-            "/Applications/Cydia.app",
-            "/Applications/Sileo.app",
-            "/Applications/Zebra.app"
-        ]
-        return !suspiciousPaths.contains { FileManager.default.fileExists(atPath: $0) }
+        // This app intentionally runs in a jailbreak environment. Do not
+        // classify the jailbreak itself as tampering; only reject a debugger.
+        return !isDebuggerAttached()
 #endif
-    }
-
-    private static func hasJailbreakArtifacts() -> Bool {
-        let paths = [
-            "/usr/sbin/sshd",
-            "/usr/bin/ssh",
-            "/bin/bash",
-            "/etc/apt",
-            "/private/var/stash",
-            "/private/var/lib/apt"
-        ]
-        return paths.contains { FileManager.default.fileExists(atPath: $0) }
     }
 
     private static func isDebuggerAttached() -> Bool {

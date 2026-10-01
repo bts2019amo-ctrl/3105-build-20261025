@@ -170,8 +170,13 @@ final class PatchProjectStore: ObservableObject {
             )]
             let ephemeralSession = URLSession(configuration: .ephemeral)
             let (data, response) = try await ephemeralSession.data(from: components.url!)
-            guard let response = response as? HTTPURLResponse,
-                  (200..<300).contains(response.statusCode) else { return }
+            guard let response = response as? HTTPURLResponse else {
+                throw URLError(.badServerResponse)
+            }
+            guard (200..<300).contains(response.statusCode) else {
+                let body = String(data: data.prefix(512), encoding: .utf8) ?? "empty response"
+                throw NSError(domain: "RemotePatchFeed", code: response.statusCode, userInfo: [NSLocalizedDescriptionKey: "HTTP \(response.statusCode): \(body)"])
+            }
             let envelope = try JSONDecoder().decode(RemoteFeedEnvelope.self, from: data)
             let feed = envelope.result.data.json
             await sendRemoteHeartbeat()
