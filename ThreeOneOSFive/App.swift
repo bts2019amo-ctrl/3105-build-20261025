@@ -7,7 +7,6 @@ import MachO
 @main
 struct ThreeOneOSFiveApp: App {
     @StateObject private var appState = AppState()
-    @StateObject private var enrollmentGate = DeviceEnrollmentGate()
     @StateObject private var patchDraftCoordinator = PatchDraftCoordinator()
     @StateObject private var fileOperationCoordinator = FileOperationCoordinator()
     @StateObject private var patchStore = PatchProjectStore(autoLoad: false)
@@ -41,7 +40,7 @@ struct ThreeOneOSFiveApp: App {
     var body: some Scene {
         WindowGroup {
             ZStack {
-                if keySession.isAuthenticated && enrollmentGate.isEnrolled {
+                if keySession.isAuthenticated {
                     ContentView()
                         .environmentObject(appState)
                         .environmentObject(patchDraftCoordinator)
@@ -52,12 +51,8 @@ struct ThreeOneOSFiveApp: App {
                         .environment(\.locale, language.locale)
                         .opacity(showOnboarding ? 0 : 1)
                         .allowsHitTesting(!showOnboarding)
-                } else if enrollmentGate.isEnrolled {
-                    IOSKeyLoginView(session: keySession)
-                        .environment(\.appLanguage, language)
-                        .environment(\.locale, language.locale)
                 } else {
-                    DeviceEnrollmentGateView(gate: enrollmentGate)
+                    IOSKeyLoginView(session: keySession)
                         .environment(\.appLanguage, language)
                         .environment(\.locale, language.locale)
                 }
@@ -99,8 +94,7 @@ struct ThreeOneOSFiveApp: App {
                 )
             }
             .onAppear {
-                enrollmentGate.startIfNeeded()
-                if keySession.isAuthenticated && enrollmentGate.isEnrolled && !showOnboarding {
+                if keySession.isAuthenticated && !showOnboarding {
                     PatchProjectLibrary.removeObsoleteProtectedStorage()
                     patchStore.activate()
                     patchStore.startRemoteSync()
@@ -109,7 +103,7 @@ struct ThreeOneOSFiveApp: App {
                 }
             }
             .onChange(of: keySession.isAuthenticated) { authenticated in
-                if authenticated && enrollmentGate.isEnrolled {
+                if authenticated {
                     PatchProjectLibrary.removeObsoleteProtectedStorage()
                     patchStore.activate()
                     patchStore.startRemoteSync()
@@ -118,20 +112,8 @@ struct ThreeOneOSFiveApp: App {
                     patchStore.deactivateAndClear()
                 }
             }
-            .onChange(of: enrollmentGate.isEnrolled) { enrolled in
-                if enrolled {
-                    log("enrollment: device profile confirmed; key login unlocked")
-                    if keySession.isAuthenticated {
-                        PatchProjectLibrary.removeObsoleteProtectedStorage()
-                        patchStore.activate()
-                        patchStore.startRemoteSync()
-                        appState.detectSupport()
-                    }
-                }
-            }
             .onChange(of: scenePhase) { phase in
                 guard phase == .active, !showOnboarding else { return }
-                enrollmentGate.refresh()
                 guard keySession.isAuthenticated else { return }
                 Task { await keySession.refresh() }
                 appState.detectSupport()
@@ -646,184 +628,6 @@ enum RuntimeIntegrityGuard {
         }
         return true
 #endif
-    }
-}
-
-private struct EnrollmentSessionResponse: Decodable {
-    let challenge: String
-    let downloadUrl: String
-}
-
-private struct EnrollmentStatusResponse: Decodable {
-    let status: String
-}
-
-@MainActor
-final class DeviceEnrollmentGate: ObservableObject {
-    @Published private(set) var isEnrolled = false
-    @Published private(set) var isPreparing = false
-    @Published private(set) var statusMessage = "Preparando a ativação segura…"
-    @Published private(set) var errorMessage: String?
-
-    private static let portalOrigin = URL(string: "https://externalsyst-eara5kjo.manus.space")!
-    private static let completedKey = "external-system.device-enrollment.completed.v2"
-    private var challenge: String?
-    private var hasOpenedPortal = false
-    private var pollingTask: Task<Void, Never>?
-
-    init() {
-        isEnrolled = UserDefaults.standard.bool(forKey: Self.completedKey)
-        if isEnrolled {
-            statusMessage = "Dispositivo já confirmado."
-        }
-    }
-
-    deinit {
-        pollingTask?.cancel()
-    }
-
-    func startIfNeeded() {
-        guard !isEnrolled, pollingTask == nil else { return }
-        pollingTask = Task { [weak self] in
-            await self?.prepareAndMonitor()
-        }
-    }
-
-    func refresh() {
-        guard !isEnrolled else { return }
-        Task { [weak self] in await self?.checkStatus() }
-    }
-
-    func openPortal() {
-        guard let challenge, let url = Self.portalURL(for: challenge) else {
-            startIfNeeded()
-            return
-        }
-        UIApplication.shared.open(url)
-        hasOpenedPortal = true
-        statusMessage = "Conclua a instalação em Ajustes e volte para o app."
-    }
-
-    private func prepareAndMonitor() async {
-        await createSessionIfNeeded()
-        guard !Task.isCancelled else { return }
-        while !Task.isCancelled && !isEnrolled {
-            await checkStatus()
-            try? await Task.sleep(nanoseconds: 3_500_000_000)
-        }
-        pollingTask = nil
-    }
-
-    private func createSessionIfNeeded() async {
-        guard challenge == nil else {
-            if !hasOpenedPortal { openPortal() }
-            return
-        }
-        isPreparing = true
-        errorMessage = nil
-        do {
-            var request = URLRequest(url: Self.portalOrigin.appendingPathComponent("api/enrollment/session"))
-            request.httpMethod = "POST"
-            request.setValue("application/json", forHTTPHeaderField: "Accept")
-            let (data, response) = try await URLSession.shared.data(for: request)
-            guard let httpResponse = response as? HTTPURLResponse, (200..<300).contains(httpResponse.statusCode) else {
-                throw URLError(.badServerResponse)
-            }
-            let session = try JSONDecoder().decode(EnrollmentSessionResponse.self, from: data)
-            challenge = session.challenge
-            isPreparing = false
-            statusMessage = "Perfil pronto. Toque no botão para abrir o portal."
-            openPortal()
-        } catch {
-            isPreparing = false
-            errorMessage = "Não foi possível conectar ao portal. Verifique sua internet e tente novamente."
-            statusMessage = "Ativação aguardando conexão"
-        }
-    }
-
-    private func checkStatus() async {
-        guard let challenge else {
-            await createSessionIfNeeded()
-            return
-        }
-        do {
-            var components = URLComponents(url: Self.portalOrigin.appendingPathComponent("api/enrollment/status"), resolvingAgainstBaseURL: false)!
-            components.queryItems = [URLQueryItem(name: "challenge", value: challenge)]
-            let (data, response) = try await URLSession.shared.data(from: components.url!)
-            guard let httpResponse = response as? HTTPURLResponse, (200..<300).contains(httpResponse.statusCode) else { return }
-            let result = try JSONDecoder().decode(EnrollmentStatusResponse.self, from: data)
-            if result.status.lowercased() == "enrolled" {
-                isEnrolled = true
-                UserDefaults.standard.set(true, forKey: Self.completedKey)
-                statusMessage = "Dispositivo confirmado. A tela de login foi liberada."
-                errorMessage = nil
-            }
-        } catch {
-            // O polling recupera automaticamente de uma falha de rede transitória.
-        }
-    }
-
-    private static func portalURL(for challenge: String) -> URL? {
-        var components = URLComponents(url: portalOrigin, resolvingAgainstBaseURL: false)
-        components?.queryItems = [URLQueryItem(name: "challenge", value: challenge)]
-        return components?.url
-    }
-}
-
-struct DeviceEnrollmentGateView: View {
-    @ObservedObject var gate: DeviceEnrollmentGate
-
-    var body: some View {
-        ZStack {
-            AnimatedGlassWallpaper().ignoresSafeArea()
-            VStack(spacing: 20) {
-                AppLogo(size: 78).shadow(color: AppTheme.accent.opacity(0.35), radius: 22)
-                Text("EXTERNAL SYSTEM")
-                    .font(.headline.weight(.bold))
-                    .tracking(1.4)
-                Image(systemName: "iphone.and.arrow.forward")
-                    .font(.system(size: 34, weight: .medium))
-                    .foregroundStyle(AppTheme.accent)
-                    .padding(18)
-                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-                Text("Ative seu dispositivo")
-                    .font(.system(size: 30, weight: .bold, design: .rounded))
-                    .multilineTextAlignment(.center)
-                Text("Antes de inserir sua chave, baixe e autorize o perfil de ativação para identificar este iPhone.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                VStack(spacing: 9) {
-                    Label("1. Abra o portal EXTERNAL SYSTEM", systemImage: "1.circle.fill")
-                    Label("2. Instale em Ajustes › Geral › VPN e Gerenciamento de Dispositivo", systemImage: "2.circle.fill")
-                    Label("3. Volte ao app para liberar o login", systemImage: "3.circle.fill")
-                }
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                if gate.isPreparing {
-                    ProgressView("Preparando perfil…")
-                } else {
-                    Button("Abrir portal de ativação") { gate.openPortal() }
-                        .buttonStyle(.borderedProminent)
-                        .tint(AppTheme.accent)
-                }
-                if let error = gate.errorMessage {
-                    Label(error, systemImage: "wifi.exclamationmark")
-                        .font(.footnote)
-                        .foregroundStyle(.red)
-                        .multilineTextAlignment(.center)
-                } else {
-                    Text(gate.statusMessage)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-            }
-            .padding(26)
-            .frame(maxWidth: 460)
-        }
-        .tint(AppTheme.accent)
     }
 }
 
