@@ -553,7 +553,7 @@ struct PatchProjectsView: View {
         } else {
             HStack(spacing: 12) {
                 skinPatchIcon(for: item)
-                Text(PatchProjectLibrary.displayName(for: item))
+                Text(PatchProjectLibrary.localizedDisplayName(for: item, language: language))
                     .font(.system(size: 16, weight: .regular, design: .rounded))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -1177,7 +1177,7 @@ private struct PatchProjectRow: View {
                 AppRowIcon(systemName: item.isLocked ? "lock.doc.fill" : "shippingbox.fill")
             }
             VStack(alignment: .leading, spacing: 3) {
-                Text(item.isLocked ? language.text("patch.locked_project") : PatchProjectLibrary.displayName(for: item))
+                Text(item.isLocked ? language.text("patch.locked_project") : PatchProjectLibrary.localizedDisplayName(for: item, language: language))
                     .font(.body.weight(.semibold))
                     .foregroundStyle(.primary)
                     .lineLimit(1)

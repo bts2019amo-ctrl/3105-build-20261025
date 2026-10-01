@@ -255,6 +255,29 @@ enum PatchProjectLibrary {
         return String(name.dropLast(5))
     }
 
+    static func localizedDisplayName(for item: PatchLibraryItem, language: AppLanguage) -> String {
+        let name = displayName(for: item)
+        let normalized = name
+            .folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+            .replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: "+", with: "plus")
+            .uppercased()
+        let key: String?
+        switch normalized {
+        case "HSALTO": key = "patch.remote.hs_alto"
+        case "HSALTOPLUSANTENA": key = "patch.remote.hs_alto_antena"
+        case "HSALTOPLUSPESCOCO": key = "patch.remote.hs_alto_pescoco"
+        case "HSPEITO": key = "patch.remote.hs_peito"
+        case "HSPEITOPLUSANTENA": key = "patch.remote.hs_peito_antena"
+        case "HSPEITOCOMANTENA": key = "patch.remote.hs_peito_com_antena"
+        case "HSPESCOCO": key = "patch.remote.hs_pescoco"
+        case "HSPESCOCOPLUSANTENA": key = "patch.remote.hs_pescoco_antena"
+        case "HSPESCOCOCOMANTENA": key = "patch.remote.hs_pescoco_com_antena"
+        default: key = nil
+        }
+        return key.map(language.text) ?? name
+    }
+
     static func setDisplayName(_ name: String, for packageID: UUID) {
         var names = UserDefaults.standard.dictionary(forKey: remoteNameKey) as? [String: String] ?? [:]
         names[packageID.uuidString] = name

@@ -9,6 +9,16 @@ enum AppAccentPalette: String, CaseIterable, Identifiable {
     case pink
     case red
     case teal
+    case cyan
+    case yellow
+    case indigo
+    case lavender
+    case gold
+    case lime
+    case crimson
+    case sky
+    case magenta
+    case slate
 
     var id: String { rawValue }
 
@@ -21,6 +31,16 @@ enum AppAccentPalette: String, CaseIterable, Identifiable {
         case .pink: return Color(red: 0.92, green: 0.25, blue: 0.52)
         case .red: return Color(red: 0.88, green: 0.18, blue: 0.20)
         case .teal: return Color(red: 0.08, green: 0.62, blue: 0.66)
+        case .cyan: return Color(red: 0.05, green: 0.78, blue: 0.88)
+        case .yellow: return Color(red: 0.98, green: 0.78, blue: 0.12)
+        case .indigo: return Color(red: 0.30, green: 0.32, blue: 0.92)
+        case .lavender: return Color(red: 0.70, green: 0.52, blue: 0.96)
+        case .gold: return Color(red: 0.92, green: 0.60, blue: 0.14)
+        case .lime: return Color(red: 0.56, green: 0.78, blue: 0.12)
+        case .crimson: return Color(red: 0.72, green: 0.08, blue: 0.24)
+        case .sky: return Color(red: 0.22, green: 0.62, blue: 0.96)
+        case .magenta: return Color(red: 0.78, green: 0.16, blue: 0.72)
+        case .slate: return Color(red: 0.36, green: 0.43, blue: 0.55)
         }
     }
 }
