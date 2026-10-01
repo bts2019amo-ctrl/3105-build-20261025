@@ -33,6 +33,7 @@ struct PatchProjectsView: View {
     @State private var selectedCategory: PatchGameCategory = PatchProjectLibrary.selectedCategory
     @State private var selectedFeature: PatchFeatureCategory = PatchProjectLibrary.selectedFeatureCategory
     @State private var showGameSelection = true
+    @State private var isRefreshing = false
     let onOpenSettings: () -> Void
     let onOpenLogs: () -> Void
 
@@ -103,7 +104,7 @@ struct PatchProjectsView: View {
                     gameSelectionContent
                 } else {
                     VStack(spacing: 0) {
-                    patchTabs
+                    featureMenu
                         .padding(.horizontal, 18)
                         .padding(.top, 10)
                         .padding(.bottom, 12)
@@ -572,52 +573,34 @@ struct PatchProjectsView: View {
         }
     }
 
-    private var patchTabs: some View {
-        HStack(spacing: 4) {
-            patchTab("APOSTADO", feature: .cache)
-            patchTab("HOLOGRAMAS", feature: .hologram)
-            patchTab("AIMBOTS", feature: .external)
-        }
-        .padding(4)
-        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .stroke(Color.white.opacity(0.10), lineWidth: 0.7)
-        }
-    }
-
-    private func patchTab(_ title: String, feature: PatchFeatureCategory) -> some View {
-        Button {
-            selectedFeature = feature
-        } label: {
-            Text(title)
-                .font(.system(size: 11, weight: .bold, design: .rounded))
-                .foregroundStyle(selectedFeature == feature ? .black : .white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 9)
-                .background(
-                    selectedFeature == feature
-                        ? Color.white
-                        : Color.clear,
-                    in: RoundedRectangle(cornerRadius: 9, style: .continuous)
-                )
-        }
-        .buttonStyle(.plain)
-    }
-
     private var patchActionButtons: some View {
         VStack(spacing: 10) {
             Button {
+                guard !isRefreshing else { return }
+                withAnimation(.linear(duration: 0.85).repeatForever(autoreverses: false)) {
+                    isRefreshing = true
+                }
                 store.syncNow()
+                Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 1_500_000_000)
+                    withAnimation(.easeOut(duration: 0.2)) {
+                        isRefreshing = false
+                    }
+                }
             } label: {
-                Label("Atualizar", systemImage: "arrow.clockwise")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.black)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 13)
-                    .background(Color.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                HStack(spacing: 8) {
+                    Image(systemName: "arrow.clockwise")
+                        .rotationEffect(.degrees(isRefreshing ? 360 : 0))
+                    Text(isRefreshing ? "Atualizando" : "Atualizar")
+                }
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.black)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 13)
+                .background(Color.white, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
             .buttonStyle(.plain)
+            .disabled(isRefreshing)
 
             Button(action: openSelectedGame) {
                 Label("Abrir jogo", systemImage: "play.fill")
