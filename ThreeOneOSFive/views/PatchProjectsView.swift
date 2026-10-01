@@ -110,6 +110,10 @@ struct PatchProjectsView: View {
                         .padding(.top, 10)
                         .padding(.bottom, 12)
 
+                    gameIdentityHeader
+                        .padding(.horizontal, 18)
+                        .padding(.bottom, 12)
+
                     if selectedFeature == .external {
                         ExternalPanelView(
                             store: store,
@@ -631,11 +635,8 @@ struct PatchProjectsView: View {
     private var sectionSummary: some View {
         HStack(alignment: .center, spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
-                Text(language.text(selectedCategory == .max ? "patch.ff_max" : "patch.ff_normal"))
-                    .font(.headline.weight(.bold))
-                    .foregroundStyle(.primary)
                 Text(featureTitle)
-                    .font(.caption.weight(.medium))
+                    .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.secondary)
             }
             Spacer()
@@ -648,6 +649,41 @@ struct PatchProjectsView: View {
         }
         .padding(.horizontal, 4)
         .padding(.vertical, 2)
+    }
+
+    private var gameIdentityHeader: some View {
+        HStack(spacing: 12) {
+            Image(selectedCategory == .max ? "FreeFireMax" : "FreeFireNormal")
+                .resizable()
+                .scaledToFill()
+                .frame(width: 52, height: 52)
+                .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+                .shadow(color: AppTheme.accent.opacity(0.35), radius: 8)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(language.text(selectedCategory == .max ? "patch.ff_max" : "patch.ff_normal"))
+                    .font(.headline.weight(.bold))
+                    .foregroundStyle(.white)
+                Text(language.text("patch.title"))
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer(minLength: 0)
+
+            Image(systemName: "chevron.down")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 13)
+        .padding(.vertical, 10)
+        .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.white.opacity(0.13), lineWidth: 0.8)
+        }
+        .contentTransition(.opacity)
+        .animation(.spring(response: 0.35, dampingFraction: 0.78), value: selectedCategory)
     }
 
     private var categorySegmentedControl: some View {
