@@ -534,10 +534,13 @@ struct PatchProjectsView: View {
     private func itemRow(_ item: PatchLibraryItem) -> some View {
         if item.isLocked {
             Button { store.requestUnlock(for: item) } label: {
-                Text(language.text("patch.locked_project"))
-                    .font(.system(size: 16, weight: .regular, design: .rounded))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                HStack(spacing: 14) {
+                    skinPatchIcon(for: item)
+                    Text(language.text("patch.locked_project"))
+                        .font(.system(size: 16, weight: .regular, design: .rounded))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
                     .padding(.horizontal, 14)
                     .padding(.vertical, 14)
                     .background(Color(red: 0.075, green: 0.075, blue: 0.085), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -549,6 +552,7 @@ struct PatchProjectsView: View {
             .buttonStyle(.plain)
         } else {
             HStack(spacing: 12) {
+                skinPatchIcon(for: item)
                 Text(PatchProjectLibrary.displayName(for: item))
                     .font(.system(size: 16, weight: .regular, design: .rounded))
                     .foregroundStyle(.white)
@@ -564,6 +568,27 @@ struct PatchProjectsView: View {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .stroke(Color.white.opacity(0.12), lineWidth: 0.8)
             }
+        }
+    }
+
+    @ViewBuilder
+    private func skinPatchIcon(for item: PatchLibraryItem) -> some View {
+        if PatchProjectLibrary.featureCategory(for: item) == .skin,
+           let iconURL = PatchProjectLibrary.remoteIconURL(for: item.id) {
+            AsyncImage(url: iconURL) { phase in
+                if let image = phase.image {
+                    image.resizable().scaledToFill()
+                } else {
+                    AppRowIcon(systemName: "shippingbox.fill", symbolSize: 22, frameSize: 58)
+                }
+            }
+            .frame(width: 58, height: 58)
+            .clipShape(RoundedRectangle(cornerRadius: 13, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 13, style: .continuous)
+                    .stroke(Color.white.opacity(0.18), lineWidth: 0.8)
+            }
+            .transition(.scale(scale: 0.88).combined(with: .opacity))
         }
     }
 
