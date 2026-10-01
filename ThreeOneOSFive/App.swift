@@ -643,28 +643,28 @@ struct IOSKeyLoginView: View {
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
-                    Spacer(minLength: 112)
+                    Spacer(minLength: 64)
 
-                    AppLogo(size: 112)
-                        .padding(.bottom, 28)
+                    AppLogo(size: 78)
+                        .padding(.bottom, 20)
 
-                    Text("ProjectX")
-                        .font(.system(size: 42, weight: .bold, design: .rounded))
+                    Text("EXTERNAL SYSTEM")
+                        .font(.system(size: 30, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
 
                     Text("Digite sua key para acessar o aplicativo.")
-                        .font(.system(size: 24, weight: .regular, design: .rounded))
+                        .font(.system(size: 17, weight: .regular, design: .rounded))
                         .foregroundStyle(Color.white.opacity(0.72))
                         .multilineTextAlignment(.center)
-                        .padding(.top, 24)
-                        .padding(.horizontal, 28)
+                        .padding(.top, 16)
+                        .padding(.horizontal, 20)
 
-                    VStack(spacing: 18) {
-                        HStack(spacing: 14) {
+                    VStack(spacing: 14) {
+                        HStack(spacing: 10) {
                             Image(systemName: "key.fill")
-                                .font(.system(size: 25, weight: .semibold))
+                                .font(.system(size: 19, weight: .semibold))
                                 .foregroundStyle(.white)
-                                .frame(width: 28)
+                                .frame(width: 22)
 
                             Group {
                                 if isKeyVisible {
@@ -673,7 +673,7 @@ struct IOSKeyLoginView: View {
                                     SecureField("Key de acesso", text: $key)
                                 }
                             }
-                            .font(.system(size: 25, weight: .regular, design: .rounded))
+                            .font(.system(size: 17, weight: .regular, design: .rounded))
                             .foregroundStyle(.white)
                             .textInputAutocapitalization(.characters)
                             .autocorrectionDisabled()
@@ -682,19 +682,19 @@ struct IOSKeyLoginView: View {
                                 isKeyVisible.toggle()
                             } label: {
                                 Image(systemName: isKeyVisible ? "eye.slash.fill" : "eye.fill")
-                                    .font(.system(size: 25, weight: .semibold))
+                                    .font(.system(size: 19, weight: .semibold))
                                     .foregroundStyle(.white.opacity(0.82))
-                                    .frame(width: 34, height: 44)
+                                    .frame(width: 28, height: 36)
                             }
                             .buttonStyle(.plain)
                             .accessibilityLabel(isKeyVisible ? "Ocultar key" : "Mostrar key")
                         }
-                        .padding(.horizontal, 26)
-                        .frame(height: 82)
+                        .padding(.horizontal, 18)
+                        .frame(height: 56)
                         .background(Color(red: 0.20, green: 0.20, blue: 0.22))
-                        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                         .overlay {
-                            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
                                 .stroke(Color.white.opacity(0.22), lineWidth: 1)
                         }
 
@@ -705,18 +705,18 @@ struct IOSKeyLoginView: View {
                                 if session.isChecking {
                                     ProgressView().tint(Color(red: 0.20, green: 0.24, blue: 0.28))
                                 } else {
-                                    HStack(spacing: 16) {
+                                    HStack(spacing: 12) {
                                         Text("ENTRAR")
                                         Image(systemName: "arrow.right")
                                     }
-                                    .font(.system(size: 27, weight: .bold, design: .rounded))
+                                    .font(.system(size: 18, weight: .bold, design: .rounded))
                                 }
                             }
                             .foregroundStyle(Color(red: 0.29, green: 0.34, blue: 0.39))
                             .frame(maxWidth: .infinity)
-                            .frame(height: 82)
+                            .frame(height: 56)
                         }
-                        .background(Color.white.opacity(0.68), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                        .background(Color.white.opacity(0.68), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                         .disabled(session.isChecking)
 
                         Button {
@@ -725,7 +725,7 @@ struct IOSKeyLoginView: View {
                             }
                         } label: {
                             Label("Colar key", systemImage: "doc.on.clipboard")
-                                .font(.system(size: 25, weight: .semibold, design: .rounded))
+                                .font(.system(size: 18, weight: .semibold, design: .rounded))
                                 .foregroundStyle(.white)
                         }
                         .buttonStyle(.plain)
@@ -735,7 +735,7 @@ struct IOSKeyLoginView: View {
                             key = ""
                         } label: {
                             Label("LIMPAR TUDO DO EXTERNAL", systemImage: "trash")
-                                .font(.system(size: 23, weight: .semibold, design: .rounded))
+                                .font(.system(size: 16, weight: .semibold, design: .rounded))
                                 .foregroundStyle(.white)
                         }
                         .buttonStyle(.plain)
@@ -748,20 +748,21 @@ struct IOSKeyLoginView: View {
                                 .padding(.horizontal, 16)
                         }
                     }
-                    .padding(38)
-                    .background(Color(red: 0.105, green: 0.105, blue: 0.12), in: RoundedRectangle(cornerRadius: 32, style: .continuous))
-                    .padding(.top, 52)
-                    .padding(.horizontal, 36)
+                    .padding(24)
+                    .background(Color(red: 0.105, green: 0.105, blue: 0.12), in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+                    .padding(.top, 36)
+                    .padding(.horizontal, 28)
 
-                    Label("Versão oficial ProjectX", systemImage: "checkmark.shield.fill")
-                        .font(.system(size: 20, weight: .regular, design: .rounded))
+                    Label("Versão oficial EXTERNAL SYSTEM", systemImage: "checkmark.shield.fill")
+                        .font(.system(size: 15, weight: .regular, design: .rounded))
                         .foregroundStyle(Color.white.opacity(0.55))
-                        .padding(.top, 50)
+                        .padding(.top, 34)
 
-                    Spacer(minLength: 80)
+                    Spacer(minLength: 48)
                 }
                 .frame(maxWidth: .infinity)
             }
+            .dynamicTypeSize(.large)
         }
         .tint(AppTheme.accent)
     }
