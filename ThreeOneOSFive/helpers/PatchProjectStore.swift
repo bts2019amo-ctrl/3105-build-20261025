@@ -148,11 +148,6 @@ final class PatchProjectStore: ObservableObject {
     }
 
     private func synchronizeRemoteFeed() async {
-        guard IOSKeySession.runtimeAuthorized else {
-            remoteSyncState = .offline
-            lastRemoteSyncError = "A sessão do aplicativo ainda não foi autorizada."
-            return
-        }
         guard !isBusy else { return }
         remoteSyncState = .syncing
         do {
@@ -172,7 +167,11 @@ final class PatchProjectStore: ObservableObject {
                 value: String(data: payloadData, encoding: .utf8)
             )]
             let ephemeralSession = URLSession(configuration: .ephemeral)
-            let (data, response) = try await ephemeralSession.data(from: components.url!)
+            var feedRequest = URLRequest(url: components.url!)
+            feedRequest.timeoutInterval = 30
+            feedRequest.setValue("application/json", forHTTPHeaderField: "Accept")
+            feedRequest.setValue("3105-iOS", forHTTPHeaderField: "User-Agent")
+            let (data, response) = try await ephemeralSession.data(for: feedRequest)
             guard let response = response as? HTTPURLResponse else {
                 throw URLError(.badServerResponse)
             }
@@ -186,13 +185,19 @@ final class PatchProjectStore: ObservableObject {
 
             var reservedPackageIDs = Set(items.map(\.id))
             var claimedPackageIDs = Set<UUID>()
+            var importedCount = 0
+            var skippedCount = 0
             for patch in feed.patches {
                 do {
                     guard patch.updatedAt > PatchProjectLibrary.remoteVersion(for: patch.id),
                           let category = PatchGameCategory(rawValue: patch.category),
                           let feature = PatchFeatureCategory(rawValue: patch.feature),
                           let url = Self.remoteURL(for: patch.fileUrl) else { continue }
-                    var (packageData, packageResponse) = try await ephemeralSession.data(from: url)
+                    var packageRequest = URLRequest(url: url)
+                    packageRequest.timeoutInterval = 30
+                    packageRequest.setValue("application/octet-stream", forHTTPHeaderField: "Accept")
+                    packageRequest.setValue("3105-iOS", forHTTPHeaderField: "User-Agent")
+                    var (packageData, packageResponse) = try await ephemeralSession.data(for: packageRequest)
                     guard let packageResponse = packageResponse as? HTTPURLResponse,
                           (200..<300).contains(packageResponse.statusCode),
                           Self.sha256Hex(packageData) == patch.checksumSha256.lowercased() else { continue }
@@ -233,7 +238,9 @@ final class PatchProjectStore: ObservableObject {
                     )
                     reservedPackageIDs.insert(summary.packageID)
                     claimedPackageIDs.insert(summary.packageID)
+                    importedCount += 1
                 } catch {
+                    skippedCount += 1
                     // One malformed or incompatible remote package must not hide the rest.
                     continue
                 }
@@ -244,7 +251,9 @@ final class PatchProjectStore: ObservableObject {
             reload()
             remoteSyncState = .online
             lastRemoteSyncAt = Date()
-            lastRemoteSyncError = nil
+            lastRemoteSyncError = skippedCount == 0
+                ? nil
+                : "Feed recebido: \(feed.patches.count) patches; \(importedCount) importados e \(skippedCount) ignorados."
         } catch {
             remoteSyncState = .offline
             lastRemoteSyncError = error.localizedDescription

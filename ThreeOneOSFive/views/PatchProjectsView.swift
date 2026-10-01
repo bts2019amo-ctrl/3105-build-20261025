@@ -795,7 +795,8 @@ struct PatchProjectsView: View {
         switch store.remoteSyncState {
         case .idle: return "Aguardando sincronização"
         case .syncing: return "Sincronizando…"
-        case .online: return "Feed atualizado"
+        case .online:
+            return store.lastRemoteSyncError == nil ? "Feed atualizado" : "Feed recebido parcialmente"
         case .offline: return "Sem conexão · toque para tentar"
         }
     }
