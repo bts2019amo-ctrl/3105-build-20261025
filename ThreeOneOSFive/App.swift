@@ -830,76 +830,133 @@ struct DeviceEnrollmentGateView: View {
 struct IOSKeyLoginView: View {
     @ObservedObject var session: IOSKeySession
     @State private var key = ""
+    @State private var isKeyVisible = false
 
     var body: some View {
         ZStack {
-            AnimatedGlassWallpaper()
+            Color.black
                 .ignoresSafeArea()
 
             ScrollView(showsIndicators: false) {
-                VStack(spacing: 22) {
-                    Spacer(minLength: 44)
-                    AppLogo(size: 76)
-                        .shadow(color: AppTheme.accent.opacity(0.35), radius: 22)
-                    Text("EXTERNAL SYSTEM")
-                        .font(.headline.weight(.bold))
-                        .tracking(1.4)
-                        .foregroundStyle(.primary)
-                    VStack(spacing: 8) {
-                        Text("Acesso protegido")
-                            .font(.system(size: 34, weight: .bold, design: .rounded))
-                        Text("Digite sua chave iOS para carregar os patches remotamente.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                    }
+                VStack(spacing: 0) {
+                    Spacer(minLength: 112)
 
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("CHAVE IOS")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(AppTheme.accent)
-                            .tracking(1.2)
-                        TextField("PROXY-SYSTEM-...", text: $key)
+                    AppLogo(size: 112)
+                        .padding(.bottom, 28)
+
+                    Text("ProjectX")
+                        .font(.system(size: 42, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+
+                    Text("Digite sua key para acessar o aplicativo.")
+                        .font(.system(size: 24, weight: .regular, design: .rounded))
+                        .foregroundStyle(Color.white.opacity(0.72))
+                        .multilineTextAlignment(.center)
+                        .padding(.top, 24)
+                        .padding(.horizontal, 28)
+
+                    VStack(spacing: 18) {
+                        HStack(spacing: 14) {
+                            Image(systemName: "key.fill")
+                                .font(.system(size: 25, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .frame(width: 28)
+
+                            Group {
+                                if isKeyVisible {
+                                    TextField("Key de acesso", text: $key)
+                                } else {
+                                    SecureField("Key de acesso", text: $key)
+                                }
+                            }
+                            .font(.system(size: 25, weight: .regular, design: .rounded))
+                            .foregroundStyle(.white)
                             .textInputAutocapitalization(.characters)
                             .autocorrectionDisabled()
-                            .textFieldStyle(.plain)
-                            .padding(16)
-                            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 17, style: .continuous))
-                            .overlay(RoundedRectangle(cornerRadius: 17).stroke(AppTheme.accent.opacity(0.28)))
-                    }
 
-                    if let error = session.errorMessage {
-                        Label(error, systemImage: "exclamationmark.triangle.fill")
-                            .font(.footnote)
-                            .foregroundStyle(.red)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-
-                    Button {
-                        session.submit(key)
-                    } label: {
-                        Group {
-                            if session.isChecking {
-                                ProgressView().tint(.white)
-                            } else {
-                                Text("Validar e entrar")
-                                    .font(.headline.weight(.semibold))
+                            Button {
+                                isKeyVisible.toggle()
+                            } label: {
+                                Image(systemName: isKeyVisible ? "eye.slash.fill" : "eye.fill")
+                                    .font(.system(size: 25, weight: .semibold))
+                                    .foregroundStyle(.white.opacity(0.82))
+                                    .frame(width: 34, height: 44)
                             }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(isKeyVisible ? "Ocultar key" : "Mostrar key")
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .tint(AppTheme.accent)
-                    .disabled(session.isChecking)
+                        .padding(.horizontal, 26)
+                        .frame(height: 82)
+                        .background(Color(red: 0.20, green: 0.20, blue: 0.22))
+                        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                .stroke(Color.white.opacity(0.22), lineWidth: 1)
+                        }
 
-                    Text("Os patches não ficam dentro da IPA. Eles só aparecem depois da validação da chave.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
+                        Button {
+                            session.submit(key)
+                        } label: {
+                            Group {
+                                if session.isChecking {
+                                    ProgressView().tint(Color(red: 0.20, green: 0.24, blue: 0.28))
+                                } else {
+                                    HStack(spacing: 16) {
+                                        Text("ENTRAR")
+                                        Image(systemName: "arrow.right")
+                                    }
+                                    .font(.system(size: 27, weight: .bold, design: .rounded))
+                                }
+                            }
+                            .foregroundStyle(Color(red: 0.29, green: 0.34, blue: 0.39))
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 82)
+                        }
+                        .background(Color.white.opacity(0.68), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                        .disabled(session.isChecking)
+
+                        Button {
+                            if let clipboardKey = UIPasteboard.general.string {
+                                key = clipboardKey
+                            }
+                        } label: {
+                            Label("Colar key", systemImage: "doc.on.clipboard")
+                                .font(.system(size: 25, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.white)
+                        }
+                        .buttonStyle(.plain)
+
+                        Button {
+                            session.logout()
+                            key = ""
+                        } label: {
+                            Label("LIMPAR TUDO DO EXTERNAL", systemImage: "trash")
+                                .font(.system(size: 23, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.white)
+                        }
+                        .buttonStyle(.plain)
+
+                        if let error = session.errorMessage {
+                            Label(error, systemImage: "exclamationmark.triangle.fill")
+                                .font(.footnote)
+                                .foregroundStyle(.red)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 16)
+                        }
+                    }
+                    .padding(38)
+                    .background(Color(red: 0.105, green: 0.105, blue: 0.12), in: RoundedRectangle(cornerRadius: 32, style: .continuous))
+                    .padding(.top, 52)
+                    .padding(.horizontal, 36)
+
+                    Label("Versão oficial ProjectX", systemImage: "checkmark.shield.fill")
+                        .font(.system(size: 20, weight: .regular, design: .rounded))
+                        .foregroundStyle(Color.white.opacity(0.55))
+                        .padding(.top, 50)
+
+                    Spacer(minLength: 80)
                 }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 34)
+                .frame(maxWidth: .infinity)
             }
         }
         .tint(AppTheme.accent)
