@@ -7,10 +7,6 @@ struct SettingsView: View {
     @AppStorage(AppLanguage.storageKey) private var languageCode = AppLanguage.english.rawValue
     @AppStorage(AppTheme.accentPaletteStorageKey)
     private var accentPalette = AppTheme.defaultAccentPalette
-    @AppStorage(AppTheme.wallpaperSelectionStorageKey)
-    private var wallpaperSelection = "none"
-    @AppStorage(AppTheme.wallpaperOverlayStorageKey)
-    private var wallpaperOverlay = AppTheme.defaultWallpaperOverlay
     @AppStorage(AppTheme.glassOpacityStorageKey)
     private var glassOpacity = AppTheme.defaultGlassOpacity
     @AppStorage(AppTheme.wallpaperBlurStorageKey)
@@ -27,8 +23,6 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                AnimatedGlassWallpaper()
-                    .ignoresSafeArea()
                 LinearGradient(
                     colors: [
                         AppTheme.accent.opacity(0.16),
@@ -45,7 +39,6 @@ struct SettingsView: View {
                         profileCard
                         languageCard
                         paletteCard
-                        wallpaperGalleryCard
                         appearanceEditorCard
                         deviceCard
                         supportCard
@@ -146,99 +139,16 @@ struct SettingsView: View {
         .glassCard()
     }
 
-    private var wallpaperGalleryCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            settingsCardHeader("settings.wallpaper", systemImage: "rectangle.stack.fill")
-            Text(language.text("settings.wallpaper_footer"))
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 142), spacing: 10)], spacing: 10) {
-                Button {
-                    withAnimation(.easeInOut(duration: 0.25)) { wallpaperSelection = "none" }
-                } label: {
-                    wallpaperPreview(title: language.text("settings.wallpaper_none"), isSelected: wallpaperSelection == "none") {
-                        ZStack {
-                            LinearGradient(colors: [.black, AppTheme.accent.opacity(0.35), .black], startPoint: .topLeading, endPoint: .bottomTrailing)
-                            Image(systemName: "sparkles")
-                                .font(.title2)
-                                .foregroundStyle(.white.opacity(0.75))
-                        }
-                    }
-                }
-                .buttonStyle(.plain)
-
-                ForEach(MotionBGSWallpaperCatalog.all) { wallpaper in
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.25)) { wallpaperSelection = wallpaper.id }
-                    } label: {
-                        wallpaperPreview(title: wallpaper.title, isSelected: wallpaperSelection == wallpaper.id) {
-                            AsyncImage(url: wallpaper.thumbnailURL) { phase in
-                                if let image = phase.image {
-                                    image.resizable().scaledToFill()
-                                } else {
-                                    ZStack {
-                                        Color.black.opacity(0.65)
-                                        ProgressView().tint(.white)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-
-            Text(language.text("settings.wallpaper_source"))
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .padding(18)
-        .glassCard()
-    }
-
-    private func wallpaperPreview<Content: View>(
-        title: String,
-        isSelected: Bool,
-        @ViewBuilder content: () -> Content
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 7) {
-            content()
-                .frame(height: 86)
-                .frame(maxWidth: .infinity)
-                .clipped()
-                .overlay {
-                    if isSelected {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous)
-                            .stroke(AppTheme.accent, lineWidth: 3)
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.title3)
-                            .foregroundStyle(.white, AppTheme.accent)
-                            .padding(7)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                    }
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.primary)
-                .lineLimit(2)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-
     private var appearanceEditorCard: some View {
         VStack(alignment: .leading, spacing: 16) {
             settingsCardHeader("settings.advanced_appearance", systemImage: "wand.and.stars")
             appearanceSlider("settings.glass_transparency", value: $glassOpacity, range: 0.05...0.30, format: "%.0f%%")
             appearanceSlider("settings.background_blur", value: $wallpaperBlur, range: 8...46, format: "%.0f")
-            appearanceSlider("settings.wallpaper_overlay", value: $wallpaperOverlay, range: 0.05...0.65, format: "%.0f%%")
             appearanceSlider("settings.animation_speed", value: $animationSpeed, range: 0.4...2.0, format: "%.1fx")
             appearanceSlider("settings.saturation", value: $saturation, range: 0.6...1.8, format: "%.1f")
             Button(language.text("settings.restore_appearance")) {
                 glassOpacity = AppTheme.defaultGlassOpacity
                 wallpaperBlur = AppTheme.defaultWallpaperBlur
-                wallpaperOverlay = AppTheme.defaultWallpaperOverlay
                 animationSpeed = AppTheme.defaultAnimationSpeed
                 saturation = AppTheme.defaultSaturation
             }

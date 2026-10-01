@@ -1,85 +1,5 @@
 import Foundation
 import SwiftUI
-import AVKit
-
-struct MotionBGSWallpaper: Identifiable, Hashable {
-    let id: String
-    let title: String
-    let slug: String
-    let mediaID: Int
-
-    var thumbnailURL: URL? {
-        URL(string: "https://motionbgs.com/i/c/364x205/media/\(mediaID)/\(slug).3840x2160.jpg")
-    }
-
-    var videoURL: URL? {
-        URL(string: "https://motionbgs.com/dl/hd/\(mediaID)")
-    }
-}
-
-enum MotionBGSWallpaperCatalog {
-    static let all: [MotionBGSWallpaper] = [
-        ("black-silk-waves", "Black Silk Waves", "black-silk-waves", 10046),
-        ("lich-king", "Lich King Winter's Wrath", "lich-king", 10208),
-        ("crimson-flower-empress", "Crimson Flower Empress", "crimson-flower-empress", 10229),
-        ("dark-angel-rising", "Dark Angel Rising", "dark-angel-rising", 10102),
-        ("illustrious-wandering-glow-of-midnight", "Illustrious - Wandering Glow of Midnight", "illustrious-wandering-glow-of-midnight", 10197),
-        ("cozy-autumn-nap", "Cozy Autumn Nap", "cozy-autumn-nap", 10214),
-        ("sukuna-fuga-flames", "Sukuna Fuga Flames", "sukuna-fuga-flames", 10057),
-        ("mr-robot-hidden-identity", "Mr. Robot Hidden Identity", "mr-robot-hidden-identity", 10175),
-        ("illidan-fel-fury", "Illidan Fel Fury (WoW)", "illidan-fel-fury", 10200),
-        ("knight-of-the-abyss", "Knight of the Abyss", "knight-of-the-abyss", 10121),
-        ("autumn-cats-at-sunset", "Autumn Cats at Sunset", "autumn-cats-at-sunset", 10226),
-        ("ronova-genshin-impact", "Ronova - Genshin Impact", "ronova-genshin-impact", 10220)
-    ].map { MotionBGSWallpaper(id: $0.0, title: $0.1, slug: $0.2, mediaID: $0.3) }
-
-    static var selected: MotionBGSWallpaper? {
-        guard let id = UserDefaults.standard.string(forKey: AppTheme.wallpaperSelectionStorageKey),
-              id != "none" else { return nil }
-        return all.first(where: { $0.id == id })
-    }
-}
-
-private final class MotionBGSLoopingPlayer: ObservableObject {
-    let player: AVQueuePlayer
-    private var looper: AVPlayerLooper?
-
-    init(url: URL?) {
-        player = AVQueuePlayer()
-        guard let url else { return }
-        let item = AVPlayerItem(url: url)
-        looper = AVPlayerLooper(player: player, templateItem: item)
-        player.isMuted = true
-        player.actionAtItemEnd = .none
-    }
-}
-
-struct MotionBGSVideoBackground: View {
-    let wallpaper: MotionBGSWallpaper
-    @StateObject private var model: MotionBGSLoopingPlayer
-
-    init(wallpaper: MotionBGSWallpaper) {
-        self.wallpaper = wallpaper
-        _model = StateObject(wrappedValue: MotionBGSLoopingPlayer(url: wallpaper.videoURL))
-    }
-
-    var body: some View {
-        GeometryReader { proxy in
-            let portraitWidth = proxy.size.height * (16.0 / 9.0)
-            VideoPlayer(player: model.player)
-                .frame(width: max(proxy.size.width, portraitWidth), height: proxy.size.height)
-                .scaleEffect(1.08)
-                .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
-                .clipped()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .clipped()
-        .allowsHitTesting(false)
-        .onAppear { model.player.play() }
-        .onDisappear { model.player.pause() }
-        .accessibilityHidden(true)
-    }
-}
 
 enum AppAccentPalette: String, CaseIterable, Identifiable {
     case orange
@@ -127,8 +47,6 @@ enum AppAccentPalette: String, CaseIterable, Identifiable {
 
 enum AppTheme {
     static let accentPaletteStorageKey = "theme.accent.palette"
-    static let wallpaperSelectionStorageKey = "theme.motionbgs.wallpaper"
-    static let wallpaperOverlayStorageKey = "theme.motionbgs.overlay"
     static let glassOpacityStorageKey = "theme.glass.opacity"
     static let wallpaperBlurStorageKey = "theme.wallpaper.blur"
     static let animationSpeedStorageKey = "theme.animation.speed"
@@ -138,7 +56,6 @@ enum AppTheme {
     static let defaultWallpaperBlur = 26.0
     static let defaultAnimationSpeed = 1.0
     static let defaultSaturation = 1.0
-    static let defaultWallpaperOverlay = 0.18
 
     static var accent: Color {
         AppAccentPalette(
@@ -150,7 +67,6 @@ enum AppTheme {
     static var wallpaperBlur: CGFloat { CGFloat(UserDefaults.standard.object(forKey: wallpaperBlurStorageKey) as? Double ?? defaultWallpaperBlur) }
     static var animationSpeed: Double { UserDefaults.standard.object(forKey: animationSpeedStorageKey) as? Double ?? defaultAnimationSpeed }
     static var saturation: Double { UserDefaults.standard.object(forKey: saturationStorageKey) as? Double ?? defaultSaturation }
-    static var wallpaperOverlay: Double { UserDefaults.standard.object(forKey: wallpaperOverlayStorageKey) as? Double ?? defaultWallpaperOverlay }
     static let pageBackground = Color.black
     static let consoleBackground = Color(red: 0.075, green: 0.075, blue: 0.09)
     static let pageInset: CGFloat = 16
@@ -295,20 +211,7 @@ struct ParallaxBrandHeader: View {
 }
 
 struct AnimatedGlassWallpaper: View {
-    @AppStorage(AppTheme.wallpaperSelectionStorageKey) private var selectedWallpaperID = "none"
-    @AppStorage(AppTheme.wallpaperOverlayStorageKey) private var wallpaperOverlay = AppTheme.defaultWallpaperOverlay
-
     var body: some View {
-        if let wallpaper = MotionBGSWallpaperCatalog.all.first(where: { $0.id == selectedWallpaperID }),
-           wallpaper.videoURL != nil {
-            MotionBGSVideoBackground(wallpaper: wallpaper)
-                .overlay(Color.black.opacity(wallpaperOverlay))
-        } else {
-            fallbackWallpaper
-        }
-    }
-
-    private var fallbackWallpaper: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { context in
             let phase = context.date.timeIntervalSinceReferenceDate * AppTheme.animationSpeed
             let intensity = max(0.65, min(2.0, AppTheme.glassOpacity / AppTheme.defaultGlassOpacity))

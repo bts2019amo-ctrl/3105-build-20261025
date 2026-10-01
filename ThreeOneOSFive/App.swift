@@ -639,7 +639,7 @@ struct IOSKeyLoginView: View {
 
     var body: some View {
         ZStack {
-            AnimatedGlassWallpaper()
+            Color.black
                 .ignoresSafeArea()
 
             ScrollView(showsIndicators: false) {
