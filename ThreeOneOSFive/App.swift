@@ -641,7 +641,6 @@ struct IOSKeyLoginView: View {
         ZStack {
             AnimatedGlassWallpaper()
                 .ignoresSafeArea()
-                .overlay(Color.black.opacity(0.42))
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {

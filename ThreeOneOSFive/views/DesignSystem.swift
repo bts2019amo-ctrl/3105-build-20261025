@@ -19,30 +19,18 @@ struct MotionBGSWallpaper: Identifiable, Hashable {
 
 enum MotionBGSWallpaperCatalog {
     static let all: [MotionBGSWallpaper] = [
-        ("galaxy-eyes", "Galaxy Eyes", "galaxy-eyes", 10050),
-        ("faust-limbus-company", "Faust Limbus Company", "faust-limbus-company", 10179),
-        ("uncle-panda-remnant-tale", "Uncle Panda Remnant Tale", "uncle-panda-remnant-tale", 10228),
         ("black-silk-waves", "Black Silk Waves", "black-silk-waves", 10046),
         ("lich-king", "Lich King Winter's Wrath", "lich-king", 10208),
         ("crimson-flower-empress", "Crimson Flower Empress", "crimson-flower-empress", 10229),
         ("dark-angel-rising", "Dark Angel Rising", "dark-angel-rising", 10102),
         ("illustrious-wandering-glow-of-midnight", "Illustrious - Wandering Glow of Midnight", "illustrious-wandering-glow-of-midnight", 10197),
         ("cozy-autumn-nap", "Cozy Autumn Nap", "cozy-autumn-nap", 10214),
-        ("yuta-and-cursed-rika", "Yuta and Cursed Rika", "yuta-and-cursed-rika", 10060),
-        ("ada-wong-black-ops", "Ada Wong Black Ops", "ada-wong-black-ops", 10204),
-        ("jinhsi", "Jinhsi Butterfly Blossom", "jinhsi", 10196),
         ("sukuna-fuga-flames", "Sukuna Fuga Flames", "sukuna-fuga-flames", 10057),
         ("mr-robot-hidden-identity", "Mr. Robot Hidden Identity", "mr-robot-hidden-identity", 10175),
-        ("psyops-vi-lol", "PsyOps Vi (LoL)", "psyops-vi-lol", 9224),
-        ("eyes-toward-heaven", "Eyes Toward Heaven", "eyes-toward-heaven", 10052),
-        ("hsin-wuthering-waves", "Hsin (Wuthering Waves)", "hsin-wuthering-waves", 10164),
         ("illidan-fel-fury", "Illidan Fel Fury (WoW)", "illidan-fel-fury", 10200),
         ("knight-of-the-abyss", "Knight of the Abyss", "knight-of-the-abyss", 10121),
         ("autumn-cats-at-sunset", "Autumn Cats at Sunset", "autumn-cats-at-sunset", 10226),
-        ("chen-zixi", "Chen Zixi (Where Winds Meet)", "chen-zixi", 10219),
-        ("sabrina-carpenter-kissing-screen", "Sabrina Carpenter Kissing Screen", "sabrina-carpenter-kissing-screen", 10065),
-        ("ronova-genshin-impact", "Ronova - Genshin Impact", "ronova-genshin-impact", 10220),
-        ("hachiware-elisa", "Hachiware Elisa", "hachiware-elisa", 10222)
+        ("ronova-genshin-impact", "Ronova - Genshin Impact", "ronova-genshin-impact", 10220)
     ].map { MotionBGSWallpaper(id: $0.0, title: $0.1, slug: $0.2, mediaID: $0.3) }
 
     static var selected: MotionBGSWallpaper? {
@@ -140,6 +128,7 @@ enum AppAccentPalette: String, CaseIterable, Identifiable {
 enum AppTheme {
     static let accentPaletteStorageKey = "theme.accent.palette"
     static let wallpaperSelectionStorageKey = "theme.motionbgs.wallpaper"
+    static let wallpaperOverlayStorageKey = "theme.motionbgs.overlay"
     static let glassOpacityStorageKey = "theme.glass.opacity"
     static let wallpaperBlurStorageKey = "theme.wallpaper.blur"
     static let animationSpeedStorageKey = "theme.animation.speed"
@@ -149,6 +138,7 @@ enum AppTheme {
     static let defaultWallpaperBlur = 26.0
     static let defaultAnimationSpeed = 1.0
     static let defaultSaturation = 1.0
+    static let defaultWallpaperOverlay = 0.18
 
     static var accent: Color {
         AppAccentPalette(
@@ -160,6 +150,7 @@ enum AppTheme {
     static var wallpaperBlur: CGFloat { CGFloat(UserDefaults.standard.object(forKey: wallpaperBlurStorageKey) as? Double ?? defaultWallpaperBlur) }
     static var animationSpeed: Double { UserDefaults.standard.object(forKey: animationSpeedStorageKey) as? Double ?? defaultAnimationSpeed }
     static var saturation: Double { UserDefaults.standard.object(forKey: saturationStorageKey) as? Double ?? defaultSaturation }
+    static var wallpaperOverlay: Double { UserDefaults.standard.object(forKey: wallpaperOverlayStorageKey) as? Double ?? defaultWallpaperOverlay }
     static let pageBackground = Color.black
     static let consoleBackground = Color(red: 0.075, green: 0.075, blue: 0.09)
     static let pageInset: CGFloat = 16
@@ -305,12 +296,13 @@ struct ParallaxBrandHeader: View {
 
 struct AnimatedGlassWallpaper: View {
     @AppStorage(AppTheme.wallpaperSelectionStorageKey) private var selectedWallpaperID = "none"
+    @AppStorage(AppTheme.wallpaperOverlayStorageKey) private var wallpaperOverlay = AppTheme.defaultWallpaperOverlay
 
     var body: some View {
         if let wallpaper = MotionBGSWallpaperCatalog.all.first(where: { $0.id == selectedWallpaperID }),
            wallpaper.videoURL != nil {
             MotionBGSVideoBackground(wallpaper: wallpaper)
-                .overlay(Color.black.opacity(0.26))
+                .overlay(Color.black.opacity(wallpaperOverlay))
         } else {
             fallbackWallpaper
         }

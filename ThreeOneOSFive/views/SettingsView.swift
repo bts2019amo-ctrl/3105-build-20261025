@@ -9,6 +9,8 @@ struct SettingsView: View {
     private var accentPalette = AppTheme.defaultAccentPalette
     @AppStorage(AppTheme.wallpaperSelectionStorageKey)
     private var wallpaperSelection = "none"
+    @AppStorage(AppTheme.wallpaperOverlayStorageKey)
+    private var wallpaperOverlay = AppTheme.defaultWallpaperOverlay
     @AppStorage(AppTheme.glassOpacityStorageKey)
     private var glassOpacity = AppTheme.defaultGlassOpacity
     @AppStorage(AppTheme.wallpaperBlurStorageKey)
@@ -27,7 +29,6 @@ struct SettingsView: View {
             ZStack {
                 AnimatedGlassWallpaper()
                     .ignoresSafeArea()
-                    .overlay(Color.black.opacity(0.30))
                 LinearGradient(
                     colors: [
                         AppTheme.accent.opacity(0.16),
@@ -231,11 +232,13 @@ struct SettingsView: View {
             settingsCardHeader("settings.advanced_appearance", systemImage: "wand.and.stars")
             appearanceSlider("settings.glass_transparency", value: $glassOpacity, range: 0.05...0.30, format: "%.0f%%")
             appearanceSlider("settings.background_blur", value: $wallpaperBlur, range: 8...46, format: "%.0f")
+            appearanceSlider("settings.wallpaper_overlay", value: $wallpaperOverlay, range: 0.05...0.65, format: "%.0f%%")
             appearanceSlider("settings.animation_speed", value: $animationSpeed, range: 0.4...2.0, format: "%.1fx")
             appearanceSlider("settings.saturation", value: $saturation, range: 0.6...1.8, format: "%.1f")
             Button(language.text("settings.restore_appearance")) {
                 glassOpacity = AppTheme.defaultGlassOpacity
                 wallpaperBlur = AppTheme.defaultWallpaperBlur
+                wallpaperOverlay = AppTheme.defaultWallpaperOverlay
                 animationSpeed = AppTheme.defaultAnimationSpeed
                 saturation = AppTheme.defaultSaturation
             }
