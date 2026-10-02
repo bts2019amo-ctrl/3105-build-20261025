@@ -189,33 +189,6 @@ enum PatchTransaction {
             resolvedRules.append(ResolvedRule(rule: rule, containerRoot: root, target: target))
         }
 
-        // Several patches may remain active at once. For a shared file, merge
-        // the second replacement against the original and the first applied
-        // version instead of blindly overwriting the first patch.
-        for index in resolvedRules.indices {
-            let rule = resolvedRules[index].rule
-            let targetKey = rule.bundleID + "\0" + rule.relativePath
-            guard appliedTargetKeys(
-                backupRoot: backupRoot,
-                fileManager: fileManager
-            ).contains(targetKey) else { continue }
-            guard let original = originalData(
-                for: targetKey,
-                backupRoot: backupRoot,
-                fileManager: fileManager
-            ), let current = try? Data(contentsOf: resolvedRules[index].target),
-                  let merged = merge(
-                    original: original,
-                    current: current,
-                    incoming: rule.replacementData
-                  ) else {
-                throw PatchPackageError.targetOccupied(
-                    rule.bundleID + "/" + rule.relativePath
-                )
-            }
-            resolvedRules[index].rule.replacementData = merged
-        }
-
         let transactionID = UUID()
         let transactionDirectory = backupRoot
             .appendingPathComponent(project.id.uuidString, isDirectory: true)
@@ -335,54 +308,6 @@ enum PatchTransaction {
         }
     }
 
-    private static func originalData(
-        for targetKey: String,
-        backupRoot: URL,
-        fileManager: FileManager
-    ) -> Data? {
-        guard let projectDirectories = try? fileManager.contentsOfDirectory(
-            at: backupRoot,
-            includingPropertiesForKeys: [.isDirectoryKey],
-            options: [.skipsHiddenFiles]
-        ) else { return nil }
-        for directory in projectDirectories {
-            guard let projectID = UUID(uuidString: directory.lastPathComponent),
-                  let receipt = latestReceipt(projectID: projectID, backupRoot: backupRoot, fileManager: fileManager),
-                  let journal = try? readJournal(receipt.journalURL),
-                  let record = journal.records.first(where: {
-                      $0.bundleID + "\0" + $0.relativePath == targetKey
-                  }),
-                  let backupFilename = record.backupFilename else { continue }
-            let backupURL = receipt.journalURL
-                .deletingLastPathComponent()
-                .appendingPathComponent(backupFilename)
-            if let data = try? Data(contentsOf: backupURL) { return data }
-        }
-        return nil
-    }
-
-    private static func merge(
-        original: Data,
-        current: Data,
-        incoming: Data
-    ) -> Data? {
-        guard original.count == current.count, original.count == incoming.count else { return nil }
-        let base = Array(original)
-        let first = Array(current)
-        let second = Array(incoming)
-        var result = first
-        for index in base.indices {
-            if first[index] == base[index] {
-                result[index] = second[index]
-            } else if second[index] == base[index] || first[index] == second[index] {
-                result[index] = first[index]
-            } else {
-                return nil
-            }
-        }
-        return Data(result)
-    }
-
     static func inspectRestore(
         receipt: PatchTransactionReceipt,
         containerResolver: (String) throws -> URL,
@@ -464,52 +389,12 @@ enum PatchTransaction {
                 try writeJournal(journal, to: receipt.journalURL)
             }
 
-            try reapplyOtherActiveTransactions(
-                excludingProjectID: receipt.projectID,
-                backupRoot: transactionDirectory.deletingLastPathComponent().deletingLastPathComponent(),
-                containerResolver: containerResolver,
-                fileManager: fileManager
-            )
             removeEmptyCreatedDirectories(createdDirectoryURLs, fileManager: fileManager)
         } catch let error as PatchPackageError {
             if case .restoreTargetsChanged = error { throw error }
             throw PatchPackageError.restoreFailed
         } catch {
             throw PatchPackageError.restoreFailed
-        }
-    }
-
-    private static func reapplyOtherActiveTransactions(
-        excludingProjectID: UUID,
-        backupRoot: URL,
-        containerResolver: (String) throws -> URL,
-        fileManager: FileManager
-    ) throws {
-        guard let directories = try? fileManager.contentsOfDirectory(
-            at: backupRoot,
-            includingPropertiesForKeys: [.isDirectoryKey],
-            options: [.skipsHiddenFiles]
-        ) else { return }
-        for directory in directories {
-            guard let projectID = UUID(uuidString: directory.lastPathComponent),
-                  projectID != excludingProjectID,
-                  let receipt = latestReceipt(projectID: projectID, backupRoot: backupRoot, fileManager: fileManager),
-                  let journal = try? readJournal(receipt.journalURL),
-                  journal.status == .applied || journal.status == .prepared else { continue }
-            let roots = try resolvedRoots(journal: journal, containerResolver: containerResolver)
-            let records = try resolvedRecords(
-                journal.records,
-                transactionDirectory: receipt.journalURL.deletingLastPathComponent(),
-                roots: roots,
-                fileManager: fileManager
-            )
-            for item in records {
-                guard let appliedFilename = item.record.appliedFilename else { continue }
-                let appliedURL = receipt.journalURL
-                    .deletingLastPathComponent()
-                    .appendingPathComponent(appliedFilename)
-                try atomicCopy(appliedURL, to: item.target, fileManager: fileManager)
-            }
         }
     }
 
@@ -618,36 +503,6 @@ enum PatchTransaction {
                 journalURL: $0.1
             )
         }
-    }
-
-    static func appliedTargetKeys(
-        backupRoot: URL,
-        excludingProjectID: UUID? = nil,
-        fileManager: FileManager = .default
-    ) -> Set<String> {
-        guard let projectDirectories = try? fileManager.contentsOfDirectory(
-            at: backupRoot,
-            includingPropertiesForKeys: [.isDirectoryKey],
-            options: [.skipsHiddenFiles]
-        ) else { return [] }
-
-        var keys = Set<String>()
-        for directory in projectDirectories {
-            guard let projectID = UUID(uuidString: directory.lastPathComponent),
-                  projectID != excludingProjectID,
-                  let receipt = latestReceipt(
-                    projectID: projectID,
-                    backupRoot: backupRoot,
-                    fileManager: fileManager
-                  ),
-                  let journal = try? readJournal(receipt.journalURL),
-                  journal.status == .applied || journal.status == .prepared
-            else { continue }
-            for record in journal.records {
-                keys.insert(record.bundleID + "\0" + record.relativePath)
-            }
-        }
-        return keys
     }
 
     static func requiredBundleIdentifiers(for receipt: PatchTransactionReceipt) throws -> [String] {
