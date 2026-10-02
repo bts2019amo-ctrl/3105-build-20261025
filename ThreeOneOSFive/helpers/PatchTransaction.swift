@@ -189,6 +189,25 @@ enum PatchTransaction {
             resolvedRules.append(ResolvedRule(rule: rule, containerRoot: root, target: target))
         }
 
+        // A new patch replaces an older active patch when both target the same
+        // file. Restore the older transaction before writing the new one.
+        let targetKeysToReplace = Set(resolvedRules.map {
+            $0.rule.bundleID + "\0" + $0.rule.relativePath
+        })
+        for receipt in overlappingActiveReceipts(
+            targetKeys: targetKeysToReplace,
+            backupRoot: backupRoot,
+            excludingProjectID: project.id,
+            fileManager: fileManager
+        ) {
+            try restore(
+                receipt: receipt,
+                allowChangedTargets: true,
+                containerResolver: containerResolver,
+                fileManager: fileManager
+            )
+        }
+
         let transactionID = UUID()
         let transactionDirectory = backupRoot
             .appendingPathComponent(project.id.uuidString, isDirectory: true)
@@ -305,6 +324,34 @@ enum PatchTransaction {
                 // Preserve the prepared journal and backups for explicit recovery.
             }
             throw PatchPackageError.applyFailed
+        }
+    }
+
+    private static func overlappingActiveReceipts(
+        targetKeys: Set<String>,
+        backupRoot: URL,
+        excludingProjectID: UUID,
+        fileManager: FileManager
+    ) -> [PatchTransactionReceipt] {
+        guard let directories = try? fileManager.contentsOfDirectory(
+            at: backupRoot,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        ) else { return [] }
+        return directories.compactMap { directory in
+            guard let projectID = UUID(uuidString: directory.lastPathComponent),
+                  projectID != excludingProjectID,
+                  let receipt = latestReceipt(
+                    projectID: projectID,
+                    backupRoot: backupRoot,
+                    fileManager: fileManager
+                  ),
+                  let journal = try? readJournal(receipt.journalURL),
+                  journal.status == .applied || journal.status == .prepared,
+                  journal.records.contains(where: {
+                      targetKeys.contains($0.bundleID + "\0" + $0.relativePath)
+                  }) else { return nil }
+            return receipt
         }
     }
 
