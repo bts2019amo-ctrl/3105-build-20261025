@@ -276,17 +276,10 @@ final class IOSKeySession: ObservableObject {
 
     init() {
         storedKey = Self.readKeychain()
-        if RuntimeIntegrityGuard.dylibInjectionDetected() {
-            errorMessage = "Alteração não autorizada detectada."
-        }
         monitorTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 2_000_000_000)
                 guard !Task.isCancelled else { return }
-                if RuntimeIntegrityGuard.dylibInjectionDetected() {
-                    await self?.invalidateForIntegrityFailure()
-                    continue
-                }
                 await self?.refresh()
             }
         }
@@ -310,10 +303,6 @@ final class IOSKeySession: ObservableObject {
 
     func refresh() async {
         guard !isChecking, let storedKey, !storedKey.isEmpty else { return }
-        guard !RuntimeIntegrityGuard.dylibInjectionDetected() else {
-            invalidateForIntegrityFailure()
-            return
-        }
         await validate(storedKey, saveOnSuccess: false)
     }
 
@@ -328,27 +317,11 @@ final class IOSKeySession: ObservableObject {
         Self.deleteKeychain()
     }
 
-    private func invalidateForIntegrityFailure() {
-        // Anti-Dylib response is deliberately non-destructive: keep the app
-        // alive, but do not authorize protected operations while injection is
-        // present.
-        Self.runtimeAuthorized = false
-        isAuthenticated = false
-        errorMessage = "Alteração não autorizada detectada."
-    }
-
     func validateIntegrityOnForeground() {
-        if RuntimeIntegrityGuard.dylibInjectionDetected() {
-            invalidateForIntegrityFailure()
-        }
     }
 
     private func validate(_ key: String, saveOnSuccess: Bool) async {
         guard !isChecking else { return }
-        guard !RuntimeIntegrityGuard.dylibInjectionDetected() else {
-            invalidateForIntegrityFailure()
-            return
-        }
         isChecking = true
         defer { isChecking = false }
         do {
