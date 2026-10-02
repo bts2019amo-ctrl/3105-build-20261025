@@ -267,8 +267,6 @@ final class IOSKeySession: ObservableObject {
     @Published var errorMessage: String?
 
     private static let endpoint = URL(string: "https://proxysystem.org/api/trpc/proxyKeys.publicCheckKey")!
-    private static let expectedEndpoint = "https://proxysystem.org/api/trpc/proxyKeys.publicCheckKey"
-    private static let expectedPatchEndpoint = "https://patchremote-guxthetm.manus.space"
     private static let keychainService = "com.3105.ios-key"
     private static let keychainAccount = "proxy-system-key"
     private static let identityKeychainService = "com.3105.installation-integrity"
@@ -278,17 +276,10 @@ final class IOSKeySession: ObservableObject {
 
     init() {
         storedKey = Self.readKeychain()
-        if let protectionMessage = Self.protectionFailureMessage() {
-            errorMessage = protectionMessage
-        }
         monitorTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 2_000_000_000)
                 guard !Task.isCancelled else { return }
-                if let protectionMessage = Self.protectionFailureMessage() {
-                    await self?.blockProtectedSession(with: protectionMessage)
-                    continue
-                }
                 await self?.refresh()
             }
         }
@@ -302,10 +293,6 @@ final class IOSKeySession: ObservableObject {
     }
 
     func submit(_ rawKey: String) {
-        if let protectionMessage = Self.protectionFailureMessage() {
-            errorMessage = protectionMessage
-            return
-        }
         let key = rawKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !key.isEmpty else {
             errorMessage = "Digite sua chave iOS."
@@ -316,10 +303,6 @@ final class IOSKeySession: ObservableObject {
 
     func refresh() async {
         guard !isChecking, let storedKey, !storedKey.isEmpty else { return }
-        if let protectionMessage = Self.protectionFailureMessage() {
-            blockProtectedSession(with: protectionMessage)
-            return
-        }
         await validate(storedKey, saveOnSuccess: false)
     }
 
@@ -335,17 +318,10 @@ final class IOSKeySession: ObservableObject {
     }
 
     func validateIntegrityOnForeground() {
-        if let protectionMessage = Self.protectionFailureMessage() {
-            blockProtectedSession(with: protectionMessage)
-        }
     }
 
     private func validate(_ key: String, saveOnSuccess: Bool) async {
         guard !isChecking else { return }
-        if let protectionMessage = Self.protectionFailureMessage() {
-            blockProtectedSession(with: protectionMessage)
-            return
-        }
         isChecking = true
         defer { isChecking = false }
         do {
@@ -384,29 +360,6 @@ final class IOSKeySession: ObservableObject {
                 errorMessage = "Não foi possível verificar a chave. Verifique sua conexão."
             }
         }
-    }
-
-    private func blockProtectedSession(with message: String) {
-        Self.runtimeAuthorized = false
-        isAuthenticated = false
-        errorMessage = message
-    }
-
-    private static func protectionFailureMessage() -> String? {
-        guard endpoint.absoluteString == expectedEndpoint,
-              RemotePatchConfiguration.baseURL.absoluteString == expectedPatchEndpoint else {
-            return "Endpoint ou configuração crítica alterada."
-        }
-        guard RuntimeIntegrityGuard.passesBundleIdentityCheck() else {
-            return "Identidade da aplicação alterada."
-        }
-        guard !RuntimeIntegrityGuard.hasForbiddenBundleArtifact() else {
-            return "Dylib ou DEB não autorizado detectado."
-        }
-        guard !RuntimeIntegrityGuard.dylibInjectionDetected() else {
-            return "Injeção Dylib não autorizada detectada."
-        }
-        return nil
     }
 
     private static var deviceIdentifier: String {
@@ -564,167 +517,6 @@ final class IOSKeySession: ObservableObject {
         item[kSecValueData as String] = data
         item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
         SecItemAdd(item as CFDictionary, nil)
-    }
-}
-
-enum RuntimeIntegrityGuard {
-    private static let expectedBundleIdentifier = "com.apple.mobile.MobileHouseArrest"
-    // Xcode emits PRODUCT_NAME (3105) as CFBundleName; the visible app name
-    // remains EXTERNAL SYSTEM in CFBundleDisplayName.
-    private static let expectedBundleName = "3105"
-
-    private static let dylibIndicators = [
-        "frida", "substrate", "libhooker", "substitute", "cycript",
-        "flex", "tweakinject", "liberty", "shadow"
-    ]
-
-    static func dylibInjectionDetected() -> Bool {
-#if targetEnvironment(simulator)
-        return false
-#else
-        let bundleURL = Bundle.main.bundleURL
-        if let enumerator = FileManager.default.enumerator(
-            at: bundleURL,
-            includingPropertiesForKeys: [.isRegularFileKey],
-            options: []
-        ) {
-            for case let url as URL in enumerator {
-                let name = url.lastPathComponent.lowercased()
-                if dylibIndicators.contains(where: { name.contains($0) }) {
-                    return true
-                }
-            }
-        }
-
-        let imageCount = _dyld_image_count()
-        for index in 0..<imageCount {
-            guard let pointer = _dyld_get_image_name(index),
-                  let rawPath = String(validatingUTF8: pointer) else { continue }
-            let path = rawPath.lowercased()
-            if dylibIndicators.contains(where: { path.contains($0) }) {
-                return true
-            }
-        }
-        return false
-#endif
-    }
-
-    static func hasForbiddenBundleArtifact() -> Bool {
-#if targetEnvironment(simulator)
-        return false
-#else
-        guard let enumerator = FileManager.default.enumerator(
-            at: Bundle.main.bundleURL,
-            includingPropertiesForKeys: [.isRegularFileKey],
-            options: []
-        ) else { return false }
-        for case let url as URL in enumerator {
-            let extensionName = url.pathExtension.lowercased()
-            let lowerName = url.lastPathComponent.lowercased()
-            if extensionName == "dylib" || extensionName == "deb" || extensionName == "so"
-                || lowerName.contains("frida")
-                || lowerName.contains("substrate")
-                || lowerName.contains("libhooker")
-                || lowerName.contains("substitute")
-                || lowerName.contains("cycript")
-                || lowerName.contains("flex") {
-                return true
-            }
-        }
-        return false
-#endif
-    }
-
-    static func passesBundleIdentityCheck() -> Bool {
-        guard Bundle.main.bundleIdentifier == expectedBundleIdentifier,
-              Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String == expectedBundleName else {
-            return false
-        }
-        // CFBundleDisplayName may be localized by iOS. It is presentation
-        // metadata, not a stable installation identity, so do not reject a
-        // valid localized build because its visible name differs at runtime.
-        guard let executableURL = Bundle.main.executableURL,
-              executableURL.path.hasPrefix(Bundle.main.bundleURL.path + "/"),
-              FileManager.default.isReadableFile(atPath: executableURL.path),
-              Bundle.main.object(forInfoDictionaryKey: "CFBundlePackageType") as? String == "APPL" else {
-            return false
-        }
-        return true
-    }
-
-    static func passesRuntimeSecurityCheck() -> Bool {
-#if targetEnvironment(simulator)
-        return true
-#else
-        // This app intentionally runs in a jailbreak environment. Do not
-        // classify the jailbreak itself as tampering; only reject a debugger.
-        return !isDebuggerAttached()
-#endif
-    }
-
-    private static func isDebuggerAttached() -> Bool {
-        var processInfo = kinfo_proc()
-        var size = MemoryLayout<kinfo_proc>.stride
-        var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()]
-        let result = mib.withUnsafeMutableBufferPointer { buffer in
-            sysctl(buffer.baseAddress, u_int(buffer.count), &processInfo, &size, nil, 0)
-        }
-        guard result == 0 else { return true }
-        return (processInfo.kp_proc.p_flag & P_TRACED) != 0
-    }
-
-    @MainActor
-    static func passesInstallationBaseline() -> Bool {
-        IOSKeySession.installationBaselineMatches()
-    }
-
-    static func passesLoadedImageCheck() -> Bool {
-#if targetEnvironment(simulator)
-        return true
-#else
-        #if arch(arm64)
-        // Supported device architecture.
-        #else
-        return false
-        #endif
-        let bundlePath = Bundle.main.bundleURL.standardizedFileURL.path
-        if let enumerator = FileManager.default.enumerator(
-            at: Bundle.main.bundleURL,
-            includingPropertiesForKeys: [.isRegularFileKey],
-            options: []
-        ) {
-            for case let url as URL in enumerator {
-                let extensionName = url.pathExtension.lowercased()
-                if extensionName == "dylib"
-                    || extensionName == "deb" {
-                    return false
-                }
-            }
-        }
-        let imageCount = _dyld_image_count()
-        for index in 0..<imageCount {
-            guard let pointer = _dyld_get_image_name(index),
-                  let rawPath = String(validatingUTF8: pointer) else { continue }
-            let path = URL(fileURLWithPath: rawPath).standardizedFileURL.path
-            let isSystemImage = path.hasPrefix("/System/Library/")
-                || path.hasPrefix("/usr/lib/")
-                || path.hasPrefix("/usr/libexec/")
-            let extensionName = URL(fileURLWithPath: path).pathExtension.lowercased()
-            let isBundleForbiddenFile = path.hasPrefix(bundlePath)
-                && (extensionName == "dylib" || extensionName == "deb")
-            let lowerPath = path.lowercased()
-            let isInjectedImage = lowerPath.contains("frida")
-                || lowerPath.contains("substrate")
-                || lowerPath.contains("libhooker")
-                || lowerPath.contains("substitute")
-                || lowerPath.contains("cycript")
-                || lowerPath.contains("tweakinject")
-            if (!isSystemImage && isBundleForbiddenFile) || isInjectedImage {
-                return false
-            }
-        }
-        return true
-#endif
     }
 }
 
