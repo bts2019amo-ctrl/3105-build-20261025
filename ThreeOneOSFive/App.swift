@@ -276,10 +276,17 @@ final class IOSKeySession: ObservableObject {
 
     init() {
         storedKey = Self.readKeychain()
+        if RuntimeIntegrityGuard.dylibInjectionDetected() {
+            errorMessage = "Biblioteca Dylib não autorizada detectada."
+        }
         monitorTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 2_000_000_000)
                 guard !Task.isCancelled else { return }
+                if RuntimeIntegrityGuard.dylibInjectionDetected() {
+                    await self?.invalidateForIntegrityFailure()
+                    continue
+                }
                 await self?.refresh()
             }
         }
@@ -303,6 +310,10 @@ final class IOSKeySession: ObservableObject {
 
     func refresh() async {
         guard !isChecking, let storedKey, !storedKey.isEmpty else { return }
+        guard !RuntimeIntegrityGuard.dylibInjectionDetected() else {
+            invalidateForIntegrityFailure()
+            return
+        }
         await validate(storedKey, saveOnSuccess: false)
     }
 
@@ -318,18 +329,26 @@ final class IOSKeySession: ObservableObject {
     }
 
     private func invalidateForIntegrityFailure() {
-        // Kept as a compatibility hook for older callers. Installation or
-        // signing differences must never terminate the application.
-        errorMessage = nil
+        // Anti-Dylib response is deliberately non-destructive: keep the app
+        // alive, but do not authorize protected operations while injection is
+        // present.
+        Self.runtimeAuthorized = false
+        isAuthenticated = false
+        errorMessage = "Biblioteca Dylib não autorizada detectada."
     }
 
     func validateIntegrityOnForeground() {
-        // No device-specific integrity gate: a validly installed build can
-        // run on another supported device without deleting its local data.
+        if RuntimeIntegrityGuard.dylibInjectionDetected() {
+            invalidateForIntegrityFailure()
+        }
     }
 
     private func validate(_ key: String, saveOnSuccess: Bool) async {
         guard !isChecking else { return }
+        guard !RuntimeIntegrityGuard.dylibInjectionDetected() else {
+            invalidateForIntegrityFailure()
+            return
+        }
         isChecking = true
         defer { isChecking = false }
         do {
@@ -532,6 +551,56 @@ enum RuntimeIntegrityGuard {
     private static let expectedBundleIdentifier = "com.apple.mobile.MobileHouseArrest"
     private static let expectedBundleName = "EXTERNAL SYSTEM"
     private static let expectedDisplayName = "EXTERNAL SYSTEM"
+
+    private static let dylibIndicators = [
+        "frida", "substrate", "libhooker", "substitute", "cycript",
+        "flex", "tweakinject", "liberty", "shadow"
+    ]
+
+    static func dylibInjectionDetected() -> Bool {
+#if targetEnvironment(simulator)
+        return false
+#else
+        let environment = ProcessInfo.processInfo.environment
+        if environment["DYLD_INSERT_LIBRARIES"] != nil
+            || environment["DYLD_LIBRARY_PATH"] != nil
+            || environment["DYLD_FRAMEWORK_PATH"] != nil {
+            return true
+        }
+
+        let bundleURL = Bundle.main.bundleURL
+        if let enumerator = FileManager.default.enumerator(
+            at: bundleURL,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: []
+        ) {
+            for case let url as URL in enumerator {
+                let name = url.lastPathComponent.lowercased()
+                let ext = url.pathExtension.lowercased()
+                if ext == "dylib" || ext == "deb" || ext == "so"
+                    || dylibIndicators.contains(where: { name.contains($0) }) {
+                    return true
+                }
+            }
+        }
+
+        let imageCount = _dyld_image_count()
+        for index in 0..<imageCount {
+            guard let pointer = _dyld_get_image_name(index),
+                  let rawPath = String(validatingUTF8: pointer) else { continue }
+            let path = rawPath.lowercased()
+            let isSystemImage = path.hasPrefix("/system/library/")
+                || path.hasPrefix("/usr/lib/")
+                || path.hasPrefix("/usr/libexec/")
+            let ext = URL(fileURLWithPath: path).pathExtension.lowercased()
+            if (!isSystemImage && ext == "dylib")
+                || dylibIndicators.contains(where: { path.contains($0) }) {
+                return true
+            }
+        }
+        return false
+#endif
+    }
 
     static func hasForbiddenBundleArtifact() -> Bool {
 #if targetEnvironment(simulator)
