@@ -549,7 +549,9 @@ final class IOSKeySession: ObservableObject {
 
 enum RuntimeIntegrityGuard {
     private static let expectedBundleIdentifier = "com.apple.mobile.MobileHouseArrest"
-    private static let expectedBundleName = "EXTERNAL SYSTEM"
+    // Xcode emits PRODUCT_NAME (3105) as CFBundleName; the visible app name
+    // remains EXTERNAL SYSTEM in CFBundleDisplayName.
+    private static let expectedBundleName = "3105"
     private static let expectedDisplayName = "EXTERNAL SYSTEM"
 
     private static let dylibIndicators = [
