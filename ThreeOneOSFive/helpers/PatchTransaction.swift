@@ -189,6 +189,21 @@ enum PatchTransaction {
             resolvedRules.append(ResolvedRule(rule: rule, containerRoot: root, target: target))
         }
 
+        // Several patches may remain active at once. Never let a later patch
+        // overwrite a file owned by another active transaction, because the
+        // first transaction could no longer restore its original contents.
+        let occupiedTargets = appliedTargetKeys(
+            backupRoot: backupRoot,
+            fileManager: fileManager
+        )
+        if let conflict = resolvedRules.first(where: {
+            occupiedTargets.contains($0.rule.bundleID + "\0" + $0.rule.relativePath)
+        }) {
+            throw PatchPackageError.targetOccupied(
+                conflict.rule.bundleID + "/" + conflict.rule.relativePath
+            )
+        }
+
         let transactionID = UUID()
         let transactionDirectory = backupRoot
             .appendingPathComponent(project.id.uuidString, isDirectory: true)
