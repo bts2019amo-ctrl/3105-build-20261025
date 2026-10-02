@@ -277,9 +277,7 @@ final class IOSKeySession: ObservableObject {
     init() {
         Self.enforceInstallationIdentity()
         if !RuntimeIntegrityGuard.passesBundleIdentityCheck()
-            || !RuntimeIntegrityGuard.passesLoadedImageCheck()
             || RuntimeIntegrityGuard.hasForbiddenBundleArtifact()
-            || !RuntimeIntegrityGuard.passesRuntimeSecurityCheck()
             || !RuntimeIntegrityGuard.passesInstallationBaseline() {
             try? PatchProjectLibrary.resetAll()
             PatchKeyStore.deleteAll()
@@ -292,9 +290,8 @@ final class IOSKeySession: ObservableObject {
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 2_000_000_000)
                 guard !Task.isCancelled else { return }
-                guard RuntimeIntegrityGuard.passesLoadedImageCheck(),
-                      !RuntimeIntegrityGuard.hasForbiddenBundleArtifact(),
-                      RuntimeIntegrityGuard.passesRuntimeSecurityCheck(),
+                guard !RuntimeIntegrityGuard.hasForbiddenBundleArtifact(),
+                      RuntimeIntegrityGuard.passesBundleIdentityCheck(),
                       RuntimeIntegrityGuard.passesInstallationBaseline() else {
                     await self?.invalidateForIntegrityFailure()
                     return
@@ -347,11 +344,9 @@ final class IOSKeySession: ObservableObject {
     }
 
     func validateIntegrityOnForeground() {
-        guard RuntimeIntegrityGuard.passesBundleIdentityCheck(),
-              RuntimeIntegrityGuard.passesLoadedImageCheck(),
-              !RuntimeIntegrityGuard.hasForbiddenBundleArtifact(),
-              RuntimeIntegrityGuard.passesRuntimeSecurityCheck(),
-              RuntimeIntegrityGuard.passesInstallationBaseline() else {
+            guard RuntimeIntegrityGuard.passesBundleIdentityCheck(),
+                  !RuntimeIntegrityGuard.hasForbiddenBundleArtifact(),
+                  RuntimeIntegrityGuard.passesInstallationBaseline() else {
             invalidateForIntegrityFailure()
             return
         }
