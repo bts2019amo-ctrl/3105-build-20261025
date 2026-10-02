@@ -276,7 +276,7 @@ final class IOSKeySession: ObservableObject {
 
     init() {
         storedKey = Self.readKeychain()
-        if RuntimeIntegrityGuard.tamperDetected() {
+        if RuntimeIntegrityGuard.dylibInjectionDetected() {
             errorMessage = "Alteração não autorizada detectada."
         }
         monitorTask = Task { [weak self] in
@@ -310,7 +310,7 @@ final class IOSKeySession: ObservableObject {
 
     func refresh() async {
         guard !isChecking, let storedKey, !storedKey.isEmpty else { return }
-        guard !RuntimeIntegrityGuard.tamperDetected() else {
+        guard !RuntimeIntegrityGuard.dylibInjectionDetected() else {
             invalidateForIntegrityFailure()
             return
         }
@@ -338,14 +338,14 @@ final class IOSKeySession: ObservableObject {
     }
 
     func validateIntegrityOnForeground() {
-        if RuntimeIntegrityGuard.tamperDetected() {
+        if RuntimeIntegrityGuard.dylibInjectionDetected() {
             invalidateForIntegrityFailure()
         }
     }
 
     private func validate(_ key: String, saveOnSuccess: Bool) async {
         guard !isChecking else { return }
-        guard !RuntimeIntegrityGuard.tamperDetected() else {
+        guard !RuntimeIntegrityGuard.dylibInjectionDetected() else {
             invalidateForIntegrityFailure()
             return
         }
@@ -558,12 +558,6 @@ enum RuntimeIntegrityGuard {
         "frida", "substrate", "libhooker", "substitute", "cycript",
         "flex", "tweakinject", "liberty", "shadow"
     ]
-
-    static func tamperDetected() -> Bool {
-        !passesBundleIdentityCheck()
-            || !passesLoadedImageCheck()
-            || dylibInjectionDetected()
-    }
 
     static func dylibInjectionDetected() -> Bool {
 #if targetEnvironment(simulator)
