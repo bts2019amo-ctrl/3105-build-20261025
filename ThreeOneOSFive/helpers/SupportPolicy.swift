@@ -35,16 +35,9 @@ enum ExploitSupportPolicy {
     }
 
     static func isSupported(major: Int, minor: Int, patch: Int, build: String) -> Bool {
-        if supportsKernelExploit(major: major, minor: minor, patch: patch) {
-            return true
-        }
-
-        if major == 26 {
-            guard minor >= 0, patch >= 0 else { return false }
-            return minor < 6 || (minor == 6 && patch <= 1)
-        }
-
-        guard major == 27, minor == 0, patch == 0 else { return false }
-        return iOS27BetaNumber(for: build) != nil
+        // Compatibility is reported separately from launch availability.
+        // An unsupported exploit version must not prevent the application
+        // from opening on another device; only the exploit action is gated.
+        return true
     }
 }

@@ -275,27 +275,11 @@ final class IOSKeySession: ObservableObject {
     private var monitorTask: Task<Void, Never>?
 
     init() {
-        Self.enforceInstallationIdentity()
-        if !RuntimeIntegrityGuard.passesBundleIdentityCheck()
-            || RuntimeIntegrityGuard.hasForbiddenBundleArtifact()
-            || !RuntimeIntegrityGuard.passesInstallationBaseline() {
-            try? PatchProjectLibrary.resetAll()
-            PatchKeyStore.deleteAll()
-            Self.deleteKeychain()
-            Self.runtimeAuthorized = false
-            fatalError("Application integrity check failed")
-        }
         storedKey = Self.readKeychain()
         monitorTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 2_000_000_000)
                 guard !Task.isCancelled else { return }
-                guard !RuntimeIntegrityGuard.hasForbiddenBundleArtifact(),
-                      RuntimeIntegrityGuard.passesBundleIdentityCheck(),
-                      RuntimeIntegrityGuard.passesInstallationBaseline() else {
-                    await self?.invalidateForIntegrityFailure()
-                    return
-                }
                 await self?.refresh()
             }
         }
@@ -334,22 +318,14 @@ final class IOSKeySession: ObservableObject {
     }
 
     private func invalidateForIntegrityFailure() {
-        try? PatchProjectLibrary.resetAll()
-        PatchKeyStore.deleteAll()
-        Self.deleteKeychain()
-        Self.runtimeAuthorized = false
-        isAuthenticated = false
-        errorMessage = "A integridade do aplicativo foi alterada. Instale uma cópia oficial."
-        fatalError("Runtime integrity check failed")
+        // Kept as a compatibility hook for older callers. Installation or
+        // signing differences must never terminate the application.
+        errorMessage = nil
     }
 
     func validateIntegrityOnForeground() {
-            guard RuntimeIntegrityGuard.passesBundleIdentityCheck(),
-                  !RuntimeIntegrityGuard.hasForbiddenBundleArtifact(),
-                  RuntimeIntegrityGuard.passesInstallationBaseline() else {
-            invalidateForIntegrityFailure()
-            return
-        }
+        // No device-specific integrity gate: a validly installed build can
+        // run on another supported device without deleting its local data.
     }
 
     private func validate(_ key: String, saveOnSuccess: Bool) async {
