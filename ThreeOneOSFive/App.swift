@@ -276,14 +276,14 @@ final class IOSKeySession: ObservableObject {
 
     init() {
         storedKey = Self.readKeychain()
-        if RuntimeIntegrityGuard.dylibInjectionDetected() {
-            errorMessage = "Biblioteca Dylib não autorizada detectada."
+        if RuntimeIntegrityGuard.tamperDetected() {
+            errorMessage = "Alteração não autorizada detectada."
         }
         monitorTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 2_000_000_000)
                 guard !Task.isCancelled else { return }
-                if RuntimeIntegrityGuard.dylibInjectionDetected() {
+                if RuntimeIntegrityGuard.tamperDetected() {
                     await self?.invalidateForIntegrityFailure()
                     continue
                 }
@@ -310,7 +310,7 @@ final class IOSKeySession: ObservableObject {
 
     func refresh() async {
         guard !isChecking, let storedKey, !storedKey.isEmpty else { return }
-        guard !RuntimeIntegrityGuard.dylibInjectionDetected() else {
+        guard !RuntimeIntegrityGuard.tamperDetected() else {
             invalidateForIntegrityFailure()
             return
         }
@@ -334,18 +334,18 @@ final class IOSKeySession: ObservableObject {
         // present.
         Self.runtimeAuthorized = false
         isAuthenticated = false
-        errorMessage = "Biblioteca Dylib não autorizada detectada."
+        errorMessage = "Alteração não autorizada detectada."
     }
 
     func validateIntegrityOnForeground() {
-        if RuntimeIntegrityGuard.dylibInjectionDetected() {
+        if RuntimeIntegrityGuard.tamperDetected() {
             invalidateForIntegrityFailure()
         }
     }
 
     private func validate(_ key: String, saveOnSuccess: Bool) async {
         guard !isChecking else { return }
-        guard !RuntimeIntegrityGuard.dylibInjectionDetected() else {
+        guard !RuntimeIntegrityGuard.tamperDetected() else {
             invalidateForIntegrityFailure()
             return
         }
@@ -556,6 +556,12 @@ enum RuntimeIntegrityGuard {
         "frida", "substrate", "libhooker", "substitute", "cycript",
         "flex", "tweakinject", "liberty", "shadow"
     ]
+
+    static func tamperDetected() -> Bool {
+        !passesBundleIdentityCheck()
+            || !passesLoadedImageCheck()
+            || dylibInjectionDetected()
+    }
 
     static func dylibInjectionDetected() -> Bool {
 #if targetEnvironment(simulator)
