@@ -563,13 +563,6 @@ enum RuntimeIntegrityGuard {
 #if targetEnvironment(simulator)
         return false
 #else
-        let environment = ProcessInfo.processInfo.environment
-        if environment["DYLD_INSERT_LIBRARIES"] != nil
-            || environment["DYLD_LIBRARY_PATH"] != nil
-            || environment["DYLD_FRAMEWORK_PATH"] != nil {
-            return true
-        }
-
         let bundleURL = Bundle.main.bundleURL
         if let enumerator = FileManager.default.enumerator(
             at: bundleURL,
@@ -578,9 +571,7 @@ enum RuntimeIntegrityGuard {
         ) {
             for case let url as URL in enumerator {
                 let name = url.lastPathComponent.lowercased()
-                let ext = url.pathExtension.lowercased()
-                if ext == "dylib" || ext == "deb" || ext == "so"
-                    || dylibIndicators.contains(where: { name.contains($0) }) {
+                if dylibIndicators.contains(where: { name.contains($0) }) {
                     return true
                 }
             }
@@ -591,12 +582,7 @@ enum RuntimeIntegrityGuard {
             guard let pointer = _dyld_get_image_name(index),
                   let rawPath = String(validatingUTF8: pointer) else { continue }
             let path = rawPath.lowercased()
-            let isSystemImage = path.hasPrefix("/system/library/")
-                || path.hasPrefix("/usr/lib/")
-                || path.hasPrefix("/usr/libexec/")
-            let ext = URL(fileURLWithPath: path).pathExtension.lowercased()
-            if (!isSystemImage && ext == "dylib")
-                || dylibIndicators.contains(where: { path.contains($0) }) {
+            if dylibIndicators.contains(where: { path.contains($0) }) {
                 return true
             }
         }
