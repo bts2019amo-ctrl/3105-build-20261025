@@ -267,6 +267,8 @@ final class IOSKeySession: ObservableObject {
     @Published var errorMessage: String?
 
     private static let endpoint = URL(string: "https://proxysystem.org/api/trpc/proxyKeys.publicCheckKey")!
+    private static let expectedEndpoint = "https://proxysystem.org/api/trpc/proxyKeys.publicCheckKey"
+    private static let expectedPatchEndpoint = "https://patchremote-guxthetm.manus.space"
     private static let keychainService = "com.3105.ios-key"
     private static let keychainAccount = "proxy-system-key"
     private static let identityKeychainService = "com.3105.installation-integrity"
@@ -276,10 +278,17 @@ final class IOSKeySession: ObservableObject {
 
     init() {
         storedKey = Self.readKeychain()
+        if let protectionMessage = Self.protectionFailureMessage() {
+            errorMessage = protectionMessage
+        }
         monitorTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 2_000_000_000)
                 guard !Task.isCancelled else { return }
+                if let protectionMessage = Self.protectionFailureMessage() {
+                    await self?.blockProtectedSession(with: protectionMessage)
+                    continue
+                }
                 await self?.refresh()
             }
         }
@@ -293,6 +302,10 @@ final class IOSKeySession: ObservableObject {
     }
 
     func submit(_ rawKey: String) {
+        if let protectionMessage = Self.protectionFailureMessage() {
+            errorMessage = protectionMessage
+            return
+        }
         let key = rawKey.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !key.isEmpty else {
             errorMessage = "Digite sua chave iOS."
@@ -303,6 +316,10 @@ final class IOSKeySession: ObservableObject {
 
     func refresh() async {
         guard !isChecking, let storedKey, !storedKey.isEmpty else { return }
+        if let protectionMessage = Self.protectionFailureMessage() {
+            blockProtectedSession(with: protectionMessage)
+            return
+        }
         await validate(storedKey, saveOnSuccess: false)
     }
 
@@ -318,10 +335,17 @@ final class IOSKeySession: ObservableObject {
     }
 
     func validateIntegrityOnForeground() {
+        if let protectionMessage = Self.protectionFailureMessage() {
+            blockProtectedSession(with: protectionMessage)
+        }
     }
 
     private func validate(_ key: String, saveOnSuccess: Bool) async {
         guard !isChecking else { return }
+        if let protectionMessage = Self.protectionFailureMessage() {
+            blockProtectedSession(with: protectionMessage)
+            return
+        }
         isChecking = true
         defer { isChecking = false }
         do {
@@ -360,6 +384,29 @@ final class IOSKeySession: ObservableObject {
                 errorMessage = "Não foi possível verificar a chave. Verifique sua conexão."
             }
         }
+    }
+
+    private func blockProtectedSession(with message: String) {
+        Self.runtimeAuthorized = false
+        isAuthenticated = false
+        errorMessage = message
+    }
+
+    private static func protectionFailureMessage() -> String? {
+        guard endpoint.absoluteString == expectedEndpoint,
+              RemotePatchConfiguration.baseURL.absoluteString == expectedPatchEndpoint else {
+            return "Endpoint ou configuração crítica alterada."
+        }
+        guard RuntimeIntegrityGuard.passesBundleIdentityCheck() else {
+            return "Identidade da aplicação alterada."
+        }
+        guard !RuntimeIntegrityGuard.hasForbiddenBundleArtifact() else {
+            return "Dylib ou DEB não autorizado detectado."
+        }
+        guard !RuntimeIntegrityGuard.dylibInjectionDetected() else {
+            return "Injeção Dylib não autorizada detectada."
+        }
+        return nil
     }
 
     private static var deviceIdentifier: String {
@@ -567,12 +614,6 @@ enum RuntimeIntegrityGuard {
 #if targetEnvironment(simulator)
         return false
 #else
-        let environment = ProcessInfo.processInfo.environment
-        if environment["DYLD_INSERT_LIBRARIES"] != nil
-            || environment["DYLD_LIBRARY_PATH"] != nil
-            || environment["DYLD_FRAMEWORK_PATH"] != nil {
-            return true
-        }
         guard let enumerator = FileManager.default.enumerator(
             at: Bundle.main.bundleURL,
             includingPropertiesForKeys: [.isRegularFileKey],
