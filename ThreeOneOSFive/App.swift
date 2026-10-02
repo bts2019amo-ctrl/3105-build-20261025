@@ -283,7 +283,7 @@ final class IOSKeySession: ObservableObject {
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 2_000_000_000)
                 guard !Task.isCancelled else { return }
-                if RuntimeIntegrityGuard.tamperDetected() {
+                if RuntimeIntegrityGuard.dylibInjectionDetected() {
                     await self?.invalidateForIntegrityFailure()
                     continue
                 }
