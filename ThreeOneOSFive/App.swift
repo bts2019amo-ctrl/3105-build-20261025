@@ -572,7 +572,6 @@ enum RuntimeIntegrityGuard {
     // Xcode emits PRODUCT_NAME (3105) as CFBundleName; the visible app name
     // remains EXTERNAL SYSTEM in CFBundleDisplayName.
     private static let expectedBundleName = "3105"
-    private static let expectedDisplayName = "EXTERNAL SYSTEM"
 
     private static let dylibIndicators = [
         "frida", "substrate", "libhooker", "substitute", "cycript",
@@ -638,10 +637,12 @@ enum RuntimeIntegrityGuard {
 
     static func passesBundleIdentityCheck() -> Bool {
         guard Bundle.main.bundleIdentifier == expectedBundleIdentifier,
-              Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String == expectedBundleName,
-              Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String == expectedDisplayName else {
+              Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String == expectedBundleName else {
             return false
         }
+        // CFBundleDisplayName may be localized by iOS. It is presentation
+        // metadata, not a stable installation identity, so do not reject a
+        // valid localized build because its visible name differs at runtime.
         guard let executableURL = Bundle.main.executableURL,
               executableURL.path.hasPrefix(Bundle.main.bundleURL.path + "/"),
               FileManager.default.isReadableFile(atPath: executableURL.path),
