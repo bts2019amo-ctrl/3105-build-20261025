@@ -253,6 +253,7 @@ private struct IOSKeyValidation: Decodable {
     let valid: Bool?
     let active: Bool?
     let status: String?
+    let errorCode: String?
     let message: String?
     let reason: String?
     let expiresAt: String?
@@ -269,6 +270,8 @@ final class IOSKeySession: ObservableObject {
     private static let endpoint = URL(string: "https://proxysystem.org/api/trpc/proxyKeys.publicCheckKey")!
     private static let keychainService = "com.3105.ios-key"
     private static let keychainAccount = "proxy-system-key"
+    private static let deviceBindingKeychainService = "com.3105.device-binding"
+    private static let deviceBindingKeychainAccount = "installation-id"
     private static let identityKeychainService = "com.3105.installation-integrity"
     private static let identityKeychainAccount = "bundle-fingerprint"
     private var storedKey: String?
@@ -327,7 +330,7 @@ final class IOSKeySession: ObservableObject {
         do {
             var components = URLComponents(url: Self.endpoint, resolvingAgainstBaseURL: false)!
             let input: [String: Any] = [
-                "json": ["key": key, "deviceId": Self.deviceIdentifier]
+                "json": ["key": key, "deviceId": try Self.deviceIdentifier()]
             ]
             let data = try JSONSerialization.data(withJSONObject: input)
             components.queryItems = [URLQueryItem(
@@ -345,7 +348,12 @@ final class IOSKeySession: ObservableObject {
                 && result.status?.lowercased() == "active"
             guard accepted else {
                 logout()
-                errorMessage = result.message ?? result.reason ?? "Chave inválida ou expirada."
+                if result.status?.lowercased() == "device_mismatch"
+                    || result.errorCode?.uppercased() == "DEVICE_MISMATCH" {
+                    errorMessage = result.message ?? "Esta chave já está vinculada a outro aparelho."
+                } else {
+                    errorMessage = result.message ?? result.reason ?? "Chave inválida ou expirada."
+                }
                 return
             }
 
@@ -362,15 +370,50 @@ final class IOSKeySession: ObservableObject {
         }
     }
 
-    private static var deviceIdentifier: String {
-        if let identifier = UIDevice.current.identifierForVendor?.uuidString {
-            return identifier
+    private static func deviceIdentifier() throws -> String {
+        if let saved = readDeviceBindingIdentifier(), !saved.isEmpty {
+            return saved
         }
-        let key = "ios.device.identifier"
-        if let saved = UserDefaults.standard.string(forKey: key) { return saved }
-        let generated = UUID().uuidString
-        UserDefaults.standard.set(generated, forKey: key)
+
+        // Identificador aleatório de instalação: estável entre logins e não
+        // depende de um identificador de hardware ou de fornecedor.
+        let generated = UUID().uuidString.replacingOccurrences(of: "-", with: "")
+        guard writeDeviceBindingIdentifier(generated) else {
+            throw KeychainError.unableToPersistDeviceBinding
+        }
         return generated
+    }
+
+    private enum KeychainError: Error {
+        case unableToPersistDeviceBinding
+    }
+
+    private static func readDeviceBindingIdentifier() -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: deviceBindingKeychainService,
+            kSecAttrAccount as String: deviceBindingKeychainAccount,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+        var result: AnyObject?
+        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+              let data = result as? Data else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    @discardableResult
+    private static func writeDeviceBindingIdentifier(_ identifier: String) -> Bool {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: deviceBindingKeychainService,
+            kSecAttrAccount as String: deviceBindingKeychainAccount
+        ]
+        SecItemDelete(query as CFDictionary)
+        var item = query
+        item[kSecValueData as String] = Data(identifier.utf8)
+        item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        return SecItemAdd(item as CFDictionary, nil) == errSecSuccess
     }
 
     private static func enforceInstallationIdentity() {
