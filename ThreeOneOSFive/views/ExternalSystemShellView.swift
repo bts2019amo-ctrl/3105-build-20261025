@@ -699,7 +699,18 @@ private struct DeltaRemoteFeatureTab: View {
         VStack(spacing: 12) {
             DeltaCard {
                 HStack {
-                    DeltaSectionTitle(title, icon: icon)
+                    if feature == .skin {
+                        Image(systemName: icon)
+                            .font(.system(size: 28, weight: .bold))
+                            .foregroundStyle(DeltaColors.purple)
+                            .frame(width: 42, height: 42)
+                            .background(DeltaColors.purple.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        Text(title)
+                            .font(.system(size: 13, weight: .black, design: .rounded))
+                            .foregroundStyle(DeltaColors.ink)
+                    } else {
+                        DeltaSectionTitle(title, icon: icon)
+                    }
                     Spacer()
                     Text("\(items.count) REMOTE")
                         .font(.system(size: 8, weight: .black))
@@ -741,11 +752,12 @@ private struct DeltaRemoteFeatureTab: View {
                             HStack(spacing: 10) {
                                 if feature == .skin, let iconURL = PatchProjectLibrary.remoteIconURL(for: item.id) {
                                     AsyncImage(url: iconURL) { phase in
-                                        if let image = phase.image { image.resizable().scaledToFill() }
-                                        else { Image(systemName: icon).resizable().scaledToFit().padding(10).foregroundStyle(DeltaColors.purple) }
+                                        if let image = phase.image { image.resizable().scaledToFit().padding(7) }
+                                        else { Image(systemName: icon).resizable().scaledToFit().padding(15).foregroundStyle(DeltaColors.purple) }
                                     }
-                                    .frame(width: 42, height: 42)
-                                    .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                                    .frame(width: 78, height: 78)
+                                    .background(DeltaColors.purple.opacity(0.10), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                                 } else {
                                     Image(systemName: icon)
                                         .font(.title3)
