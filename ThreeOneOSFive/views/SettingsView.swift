@@ -1,13 +1,17 @@
 import SwiftUI
+import UIKit
 
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.appLanguage) private var language
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var patchStore: PatchProjectStore
+    @EnvironmentObject private var keySession: IOSKeySession
+
     @AppStorage(AppLanguage.storageKey) private var languageCode = AppLanguage.english.rawValue
     @AppStorage(AppTheme.accentPaletteStorageKey)
-    private var accentPalette = AppTheme.defaultAccentPalette
+    private var accentPalette = AppAccentPalette.purple.rawValue
     @AppStorage(AppTheme.glassOpacityStorageKey)
     private var glassOpacity = AppTheme.defaultGlassOpacity
     @AppStorage(AppTheme.wallpaperBlurStorageKey)
@@ -16,207 +20,316 @@ struct SettingsView: View {
     private var animationSpeed = AppTheme.defaultAnimationSpeed
     @AppStorage(AppTheme.saturationStorageKey)
     private var saturation = AppTheme.defaultSaturation
+    @AppStorage("settings.stream.proof") private var streamProof = true
+
+    @State private var appear = false
+    @State private var showCopied = false
+    @State private var showAdvanced = false
+    @State private var isEyeModeEnabled = false
 
     private var selectedPalette: AppAccentPalette {
-        AppAccentPalette(rawValue: accentPalette) ?? .orange
+        AppAccentPalette(rawValue: accentPalette) ?? .purple
+    }
+
+    private var installationID: String {
+        UIDevice.current.identifierForVendor?.uuidString.uppercased()
+            ?? "IV-110A980E-961C-4AC1-9DA7-02D66DFCFE10"
+    }
+
+    private var motionAnimation: Animation? {
+        reduceMotion ? nil : .spring(response: 0.52, dampingFraction: 0.82)
     }
 
     var body: some View {
-        NavigationStack {
-            ZStack {
-                LinearGradient(
-                    colors: [
-                        AppTheme.accent.opacity(0.16),
-                        Color(uiColor: .systemBackground).opacity(0.92),
-                        AppTheme.accent.opacity(0.06)
-                    ],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                .ignoresSafeArea()
+        ZStack {
+            ReferenceBackground()
 
-                ScrollView {
-                    VStack(spacing: 16) {
-                        profileCard
-                        remoteSyncCard
-                        languageCard
-                        paletteCard
-                        appearanceEditorCard
-                        deviceCard
-                        supportCard
+            ScrollView(showsIndicators: false) {
+                VStack(spacing: 16) {
+                    referenceHeader
+                        .opacity(appear ? 1 : 0)
+                        .offset(y: appear ? 0 : -12)
+
+                    privacyCard
+                    licenseCard
+                    compatibilityCard
+                    languageCard
+                    supportCard
+
+                    if showAdvanced {
+                        advancedAppearanceCard
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 20)
                 }
-                .scrollIndicators(.hidden)
-            }
-            .navigationTitle(language.text("settings.title"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(language.text("common.done")) { dismiss() }
-                        .fontWeight(.semibold)
-                }
+                .padding(.horizontal, 16)
+                .padding(.top, 10)
+                .padding(.bottom, 28)
             }
         }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            referenceToolbar
+        }
+        .toolbar(.hidden, for: .navigationBar)
         .tint(AppTheme.accent)
-    }
-
-    private var profileCard: some View {
-        HStack(spacing: 14) {
-            AppLogo(size: 54)
-            VStack(alignment: .leading, spacing: 4) {
-                Text("EXTERNAL SYSTEM")
-                    .font(.title3.weight(.bold))
-                Text(language.text("common.version", appVersion))
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                Text(language.text(appState.isSupported ? "settings.supported" : "settings.unsupported"))
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(appState.isSupported ? .green : .red)
-            }
-            Spacer()
-            Image(systemName: "chevron.right")
-                .foregroundStyle(.tertiary)
+        .onAppear {
+            withAnimation(motionAnimation) { appear = true }
         }
-        .padding(18)
-        .glassCard()
+        .animation(motionAnimation, value: showAdvanced)
     }
 
-    private var remoteSyncCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            settingsCardHeader("patch.sync.title", systemImage: "arrow.triangle.2.circlepath")
-            HStack(spacing: 10) {
-                Circle()
-                    .fill(syncColor)
-                    .frame(width: 9, height: 9)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(syncTitle)
-                        .font(.subheadline.weight(.semibold))
-                    if let lastSync = patchStore.lastRemoteSyncAt {
-                        Text(lastSync, style: .time)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+    private var referenceHeader: some View {
+        HStack(spacing: 12) {
+            AppLogo(size: 48)
+                .shadow(color: AppTheme.accent.opacity(0.26), radius: 10, y: 5)
+
+            Text("3105")
+                .font(.system(size: 27, weight: .black, design: .rounded))
+                .tracking(1.2)
+                .foregroundStyle(Color(red: 0.10, green: 0.08, blue: 0.29))
+
+            Spacer(minLength: 8)
+
+            HStack(spacing: 0) {
+                Text("FF")
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 48, height: 36)
+                    .background(AppTheme.accent, in: Capsule())
+                    .shadow(color: AppTheme.accent.opacity(0.26), radius: 8, y: 3)
+
+                Text("MAX")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 54, height: 36)
+            }
+            .padding(3)
+            .background(Color.white.opacity(0.90), in: Capsule())
+            .overlay(Capsule().stroke(Color.white.opacity(0.95), lineWidth: 1))
+            .shadow(color: .black.opacity(0.05), radius: 10, y: 5)
+
+            Button {
+                withAnimation(motionAnimation) { isEyeModeEnabled.toggle() }
+            } label: {
+                Image(systemName: isEyeModeEnabled ? "eye.slash.fill" : "eye.fill")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(AppTheme.accent)
+                    .frame(width: 48, height: 48)
+                    .background(AppTheme.accent.opacity(0.10), in: Circle())
+                    .scaleEffect(isEyeModeEnabled ? 0.92 : 1)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Alternar modo de visualização")
+        }
+        .padding(.vertical, 6)
+    }
+
+    private var privacyCard: some View {
+        ReferenceCard {
+            ReferenceSectionHeader(title: "PRIVACY", systemImage: "video.slash.fill")
+            HStack {
+                Text("Stream Proof")
+                    .font(.system(size: 21, weight: .semibold, design: .rounded))
+                    .foregroundStyle(ReferencePalette.ink)
+                Spacer()
+                Toggle("", isOn: $streamProof)
+                    .labelsHidden()
+                    .toggleStyle(ReferenceToggleStyle())
+            }
+            .padding(.top, 12)
+        }
+    }
+
+    private var licenseCard: some View {
+        ReferenceCard {
+            ReferenceSectionHeader(title: "LICENSE INFORMATION", systemImage: "key.fill")
+
+            VStack(spacing: 13) {
+                referenceValue("License:", "3105")
+                referenceValue("Expired:", "Lifetime")
+                HStack(alignment: .center) {
+                    Text("UUID:")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Button {
+                        UIPasteboard.general.string = installationID
+                        withAnimation(motionAnimation) { showCopied = true }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.4) {
+                            withAnimation(motionAnimation) { showCopied = false }
+                        }
+                    } label: {
+                        Text(showCopied ? "Copied" : "Copy")
+                            .font(.subheadline.weight(.bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 17)
+                            .padding(.vertical, 8)
+                            .background(AppTheme.accent, in: Capsule())
+                            .scaleEffect(showCopied ? 1.05 : 1)
                     }
+                    .buttonStyle(.plain)
+                }
+
+                Text(installationID)
+                    .font(.system(size: 15, weight: .medium, design: .monospaced))
+                    .foregroundStyle(ReferencePalette.ink)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .minimumScaleFactor(0.72)
+                    .lineLimit(1)
+            }
+            .padding(.top, 14)
+        }
+    }
+
+    private var compatibilityCard: some View {
+        ReferenceCard {
+            ReferenceSectionHeader(title: "SYSTEM COMPATIBILITY", systemImage: "apple.logo")
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Current iOS Version:")
+                        .font(.headline.weight(.semibold))
+                        .foregroundStyle(ReferencePalette.ink)
+                    Text("\(AppInfo.osVersion) (\(AppInfo.osBuild))")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button { patchStore.syncNow() } label: {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.headline.weight(.semibold))
-                        .padding(10)
-                        .background(AppTheme.accent.opacity(0.14), in: Circle())
-                }
-                .buttonStyle(.plain)
-                .disabled(patchStore.remoteSyncState == .syncing)
+                SupportBadge(isSupported: appState.isSupported)
             }
-            if let error = patchStore.lastRemoteSyncError {
-                Text(error)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .padding(18)
-        .glassCard()
-    }
-
-    private var syncTitle: String {
-        switch patchStore.remoteSyncState {
-        case .idle: return language.text("patch.sync.waiting")
-        case .syncing: return language.text("patch.sync.syncing")
-        case .online:
-            return patchStore.lastRemoteSyncError == nil
-                ? language.text("patch.sync.updated")
-                : language.text("patch.sync.partial")
-        case .offline: return language.text("patch.sync.offline")
-        }
-    }
-
-    private var syncColor: Color {
-        switch patchStore.remoteSyncState {
-        case .online: return .green
-        case .syncing: return .orange
-        case .offline: return .red
-        case .idle: return .secondary
+            .padding(.top, 14)
         }
     }
 
     private var languageCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            settingsCardHeader("settings.language", systemImage: "globe")
-            Picker(language.text("settings.language"), selection: $languageCode) {
+        ReferenceCard {
+            ReferenceSectionHeader(title: "LANGUAGE", systemImage: "globe")
+            Picker("Language", selection: $languageCode) {
                 ForEach(AppLanguage.allCases) { option in
                     Text(option.displayName).tag(option.rawValue)
                 }
             }
             .pickerStyle(.segmented)
             .labelsHidden()
+            .padding(.top, 12)
         }
-        .padding(18)
-        .glassCard()
     }
 
-    private var paletteCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            settingsCardHeader("settings.palette", systemImage: "paintpalette.fill")
-            Text(language.text("settings.palette_footer"))
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 64), spacing: 12)], spacing: 12) {
-                ForEach(AppAccentPalette.allCases) { palette in
-                    Button {
-                        accentPalette = palette.rawValue
-                    } label: {
-                        VStack(spacing: 7) {
-                            Circle()
-                                .fill(palette.color)
-                                .frame(width: 38, height: 38)
-                                .overlay {
-                                    if palette == selectedPalette {
-                                        Circle().stroke(.white, lineWidth: 3)
-                                        Image(systemName: "checkmark")
-                                            .font(.caption.weight(.bold))
-                                            .foregroundStyle(.white)
-                                    }
-                                }
-                                .shadow(color: palette.color.opacity(0.32), radius: 8)
-                            Text(language.text("settings.palette." + palette.rawValue))
-                                .font(.caption.weight(.medium))
-                                .foregroundStyle(.primary)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
-                        .background(
-                            palette.color.opacity(palette == selectedPalette ? 0.16 : 0.06),
-                            in: RoundedRectangle(cornerRadius: 14, style: .continuous)
-                        )
+    private var supportCard: some View {
+        ReferenceCard {
+            ReferenceSectionHeader(title: "SUPPORT & SYSTEM", systemImage: "questionmark.circle.fill")
+
+            VStack(spacing: 0) {
+                Button {
+                    patchStore.syncNow()
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "bubble.left.and.bubble.right.fill")
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundStyle(AppTheme.accent)
+                            .frame(width: 34)
+                        Text("Discord Support")
+                            .font(.headline.weight(.semibold))
+                            .foregroundStyle(ReferencePalette.ink)
+                        Spacer()
+                        Image(systemName: "arrow.up.right")
+                            .font(.headline.weight(.bold))
+                            .foregroundStyle(AppTheme.accent)
                     }
-                    .buttonStyle(.plain)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(.vertical, 13)
+
+                Divider().overlay(AppTheme.accent.opacity(0.12))
+
+                Button {
+                    keySession.logout()
+                    dismiss()
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundStyle(.red)
+                            .frame(width: 34)
+                        Text("Sign Out")
+                            .font(.headline.weight(.semibold))
+                            .foregroundStyle(.red)
+                        Spacer()
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(.vertical, 13)
+            }
+            .padding(.top, 8)
+        }
+    }
+
+    private var advancedAppearanceCard: some View {
+        ReferenceCard {
+            ReferenceSectionHeader(title: "APPEARANCE", systemImage: "wand.and.stars")
+            appearanceSlider("Glass transparency", value: $glassOpacity, range: 0.05...0.30, format: "%.0f%%")
+            appearanceSlider("Background blur", value: $wallpaperBlur, range: 8...46, format: "%.0f")
+            appearanceSlider("Animation speed", value: $animationSpeed, range: 0.4...2.0, format: "%.1fx")
+            appearanceSlider("Saturation", value: $saturation, range: 0.6...1.8, format: "%.1f")
+            Button("Restore appearance") {
+                withAnimation(motionAnimation) {
+                    glassOpacity = AppTheme.defaultGlassOpacity
+                    wallpaperBlur = AppTheme.defaultWallpaperBlur
+                    animationSpeed = AppTheme.defaultAnimationSpeed
+                    saturation = AppTheme.defaultSaturation
+                    accentPalette = AppAccentPalette.purple.rawValue
                 }
             }
+            .font(.subheadline.weight(.bold))
+            .foregroundStyle(AppTheme.accent)
+            .padding(.top, 4)
         }
-        .padding(18)
-        .glassCard()
     }
 
-    private var appearanceEditorCard: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            settingsCardHeader("settings.advanced_appearance", systemImage: "wand.and.stars")
-            appearanceSlider("settings.glass_transparency", value: $glassOpacity, range: 0.05...0.30, format: "%.0f%%")
-            appearanceSlider("settings.background_blur", value: $wallpaperBlur, range: 8...46, format: "%.0f")
-            appearanceSlider("settings.animation_speed", value: $animationSpeed, range: 0.4...2.0, format: "%.1fx")
-            appearanceSlider("settings.saturation", value: $saturation, range: 0.6...1.8, format: "%.1f")
-            Button(language.text("settings.restore_appearance")) {
-                glassOpacity = AppTheme.defaultGlassOpacity
-                wallpaperBlur = AppTheme.defaultWallpaperBlur
-                animationSpeed = AppTheme.defaultAnimationSpeed
-                saturation = AppTheme.defaultSaturation
-            }
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(AppTheme.accent)
+    private var referenceToolbar: some View {
+        HStack(spacing: 0) {
+            toolbarItem("house.fill", "Dashboard", selected: false)
+            toolbarItem("scope", "Aimbot", selected: false)
+            toolbarItem("eye.fill", "Visual", selected: false)
+            toolbarItem("bolt.fill", "Misc", selected: false)
+            toolbarItem("gearshape.fill", "Settings", selected: true)
         }
-        .padding(18)
-        .glassCard()
+        .padding(.horizontal, 10)
+        .padding(.top, 10)
+        .padding(.bottom, 7)
+        .background(.ultraThinMaterial)
+        .overlay(alignment: .top) { Divider().opacity(0.32) }
+    }
+
+    private func toolbarItem(_ systemImage: String, _ title: String, selected: Bool) -> some View {
+        Button {
+            if title == "Settings" { return }
+            withAnimation(motionAnimation) { showAdvanced.toggle() }
+        } label: {
+            VStack(spacing: 5) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 20, weight: selected ? .bold : .medium))
+                    .frame(width: selected ? 62 : 50, height: 34)
+                    .background(selected ? AppTheme.accent.opacity(0.13) : .clear, in: Capsule())
+                    .foregroundStyle(selected ? AppTheme.accent : Color(red: 0.56, green: 0.62, blue: 0.69))
+                Text(title)
+                    .font(.caption.weight(selected ? .bold : .medium))
+                    .foregroundStyle(selected ? AppTheme.accent : Color(red: 0.56, green: 0.62, blue: 0.69))
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func referenceValue(_ label: String, _ value: String) -> some View {
+        HStack {
+            Text(label)
+                .font(.body)
+                .foregroundStyle(.secondary)
+            Spacer()
+            Text(value)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(ReferencePalette.ink)
+        }
     }
 
     private func appearanceSlider(
@@ -227,101 +340,119 @@ struct SettingsView: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text(language.text(title)).font(.subheadline)
+                Text(title).font(.subheadline)
                 Spacer()
                 Text(String(format: format, value.wrappedValue))
                     .font(.caption.monospacedDigit())
                     .foregroundStyle(.secondary)
             }
-            Slider(value: value, in: range)
-                .tint(AppTheme.accent)
+            Slider(value: value, in: range).tint(AppTheme.accent)
         }
-    }
-
-    private var deviceCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            settingsCardHeader("common.device", systemImage: "iphone")
-            settingValue(language.text("dashboard.hardware_model"), AppInfo.displayMachineName)
-            settingValue(language.text("settings.ios_version"), "\(AppInfo.osVersion) (\(AppInfo.osBuild))")
-        }
-        .padding(18)
-        .glassCard()
-    }
-
-    private var supportCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            settingsCardHeader("settings.verified_versions", systemImage: "checkmark.seal.fill")
-            settingValue(
-                language.text("settings.current_version"),
-                language.text(appState.isSupported ? "settings.supported" : "settings.unsupported")
-            )
-            versionLine("iOS 17", ExploitSupportPolicy.verifiedIOS17Range)
-            versionLine("iOS 18", ExploitSupportPolicy.verifiedIOS18Range)
-            versionLine("iOS 26", ExploitSupportPolicy.verifiedIOS26Range)
-            ForEach(ExploitSupportPolicy.verifiedIOS27Builds, id: \.build) { version in
-                versionLine("iOS 27", versionLabel(version))
-            }
-        }
-        .padding(18)
-        .glassCard()
-    }
-
-    private func settingsCardHeader(_ key: String, systemImage: String) -> some View {
-        Label(language.text(key), systemImage: systemImage)
-            .font(.headline)
-            .foregroundStyle(AppTheme.accent)
-    }
-
-    private func settingValue(_ label: String, _ value: String) -> some View {
-        HStack {
-            Text(label).foregroundStyle(.secondary)
-            Spacer(minLength: 12)
-            Text(value)
-                .multilineTextAlignment(.trailing)
-                .foregroundStyle(.primary)
-        }
-        .font(.subheadline)
-    }
-
-    private func versionLine(_ label: String, _ value: String) -> some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text(label).font(.subheadline.weight(.semibold))
-            Spacer(minLength: 12)
-            Text(value)
-                .font(.caption.monospaced())
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.trailing)
-        }
-    }
-
-    private var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "AppReleaseDisplayVersion") as? String
-            ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-            ?? "1.0"
-    }
-
-    private func versionLabel(
-        _ version: (beta: Int, publicBeta: Int?, build: String)
-    ) -> String {
-        if let publicBeta = version.publicBeta {
-            return language.text(
-                "settings.developer_public_beta_build",
-                Int64(version.beta),
-                Int64(publicBeta),
-                version.build
-            )
-        }
-        return language.text("settings.developer_beta_build", Int64(version.beta), version.build)
+        .padding(.top, 8)
     }
 }
 
-private extension View {
-    func glassCard() -> some View {
-        background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+private enum ReferencePalette {
+    static let ink = Color(red: 0.10, green: 0.08, blue: 0.29)
+    static let background = Color(red: 0.965, green: 0.962, blue: 0.985)
+}
+
+private struct ReferenceBackground: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var drift = false
+
+    var body: some View {
+        ZStack {
+            ReferencePalette.background
+            Circle()
+                .fill(AppTheme.accent.opacity(0.08))
+                .frame(width: 280, height: 280)
+                .blur(radius: 28)
+                .offset(x: drift ? 150 : -140, y: drift ? -280 : -130)
+            Circle()
+                .fill(Color.white.opacity(0.80))
+                .frame(width: 320, height: 320)
+                .blur(radius: 34)
+                .offset(x: drift ? -160 : 130, y: drift ? 340 : 220)
+        }
+        .ignoresSafeArea()
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 8).repeatForever(autoreverses: true)) {
+                drift = true
+            }
+        }
+    }
+}
+
+private struct ReferenceCard<Content: View>: View {
+    let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0, content: { content })
+            .padding(20)
+            .background(Color.white.opacity(0.96), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .stroke(.white.opacity(0.20), lineWidth: 0.8)
+                    .stroke(Color.white.opacity(0.96), lineWidth: 1)
             }
-            .shadow(color: .black.opacity(0.08), radius: 18, y: 8)
+            .shadow(color: AppTheme.accent.opacity(0.07), radius: 16, y: 7)
+    }
+}
+
+private struct ReferenceSectionHeader: View {
+    let title: String
+    let systemImage: String
+
+    var body: some View {
+        Label(title, systemImage: systemImage)
+            .font(.headline.weight(.bold))
+            .tracking(1.1)
+            .foregroundStyle(AppTheme.accent)
+    }
+}
+
+private struct SupportBadge: View {
+    let isSupported: Bool
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(isSupported ? Color(red: 0.08, green: 0.68, blue: 0.52) : .red)
+                .frame(width: 9, height: 9)
+            Text(isSupported ? "SUPPORTED" : "UNSUPPORTED")
+                .font(.caption.weight(.bold))
+                .tracking(0.7)
+        }
+        .foregroundStyle(isSupported ? Color(red: 0.05, green: 0.58, blue: 0.43) : .red)
+        .padding(.horizontal, 13)
+        .padding(.vertical, 10)
+        .background(
+            (isSupported ? Color(red: 0.82, green: 0.96, blue: 0.91) : Color.red.opacity(0.10)),
+            in: Capsule()
+        )
+        .overlay(Capsule().stroke((isSupported ? Color.green : Color.red).opacity(0.25), lineWidth: 1))
+    }
+}
+
+private struct ReferenceToggleStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        RoundedRectangle(cornerRadius: 17, style: .continuous)
+            .fill(configuration.isOn ? AppTheme.accent : Color.gray.opacity(0.28))
+            .frame(width: 76, height: 36)
+            .overlay(alignment: configuration.isOn ? .trailing : .leading) {
+                Circle()
+                    .fill(Color.white)
+                    .frame(width: 30, height: 30)
+                    .padding(3)
+                    .shadow(color: .black.opacity(0.10), radius: 3, y: 1)
+            }
+            .animation(.spring(response: 0.25, dampingFraction: 0.82), value: configuration.isOn)
+            .onTapGesture { configuration.isOn.toggle() }
+            .accessibilityLabel(configuration.isOn ? "Ativado" : "Desativado")
     }
 }

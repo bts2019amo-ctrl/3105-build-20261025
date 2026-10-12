@@ -44,6 +44,7 @@ struct ThreeOneOSFiveApp: App {
                 if keySession.isAuthenticated {
                     ContentView()
                         .environmentObject(appState)
+                        .environmentObject(keySession)
                         .environmentObject(patchDraftCoordinator)
                         .environmentObject(fileOperationCoordinator)
                         .environmentObject(patchStore)

@@ -51,7 +51,7 @@ enum AppTheme {
     static let wallpaperBlurStorageKey = "theme.wallpaper.blur"
     static let animationSpeedStorageKey = "theme.animation.speed"
     static let saturationStorageKey = "theme.saturation"
-    static let defaultAccentPalette = AppAccentPalette.orange.rawValue
+    static let defaultAccentPalette = AppAccentPalette.purple.rawValue
     static let defaultGlassOpacity = 0.14
     static let defaultWallpaperBlur = 26.0
     static let defaultAnimationSpeed = 1.0
@@ -67,7 +67,7 @@ enum AppTheme {
     static var wallpaperBlur: CGFloat { CGFloat(UserDefaults.standard.object(forKey: wallpaperBlurStorageKey) as? Double ?? defaultWallpaperBlur) }
     static var animationSpeed: Double { UserDefaults.standard.object(forKey: animationSpeedStorageKey) as? Double ?? defaultAnimationSpeed }
     static var saturation: Double { UserDefaults.standard.object(forKey: saturationStorageKey) as? Double ?? defaultSaturation }
-    static let pageBackground = Color.black
+    static let pageBackground = Color(red: 0.965, green: 0.962, blue: 0.985)
     static let consoleBackground = Color(red: 0.075, green: 0.075, blue: 0.09)
     static let pageInset: CGFloat = 16
     static let rowIconSize: CGFloat = 17
@@ -104,13 +104,13 @@ struct LiquidGlassCardModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .background(Color(red: 0.105, green: 0.105, blue: 0.12).opacity(0.96), in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
-            .background(tint.opacity(opacity * 0.34), in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .background(Color(uiColor: .systemBackground).opacity(0.96), in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
+            .background(tint.opacity(opacity * 0.26), in: RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                     .strokeBorder(
                         LinearGradient(
-                            colors: [.white.opacity(0.22), .white.opacity(0.04)],
+                        colors: [.white.opacity(0.86), tint.opacity(0.12), tint.opacity(0.04)],
                             startPoint: .topLeading,
                             endPoint: .bottomTrailing
                         ),
@@ -119,14 +119,14 @@ struct LiquidGlassCardModifier: ViewModifier {
             }
             .overlay {
                 RoundedRectangle(cornerRadius: cornerRadius - 1, style: .continuous)
-                    .stroke(.white.opacity(0.14), lineWidth: 3)
+                    .stroke(.white.opacity(0.68), lineWidth: 3)
                     .blur(radius: 2)
                     .mask(
                         RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
                             .fill(LinearGradient(colors: [.white, .clear], startPoint: .topLeading, endPoint: .bottomTrailing))
                     )
             }
-            .shadow(color: .black.opacity(0.38), radius: 16, y: 8)
+            .shadow(color: tint.opacity(0.10), radius: 18, y: 8)
     }
 }
 
@@ -218,9 +218,9 @@ struct AnimatedGlassWallpaper: View {
             ZStack {
                 LinearGradient(
                     colors: [
-                        Color.black,
-                        Color(red: 0.055, green: 0.055, blue: 0.065),
-                        Color.black
+                        Color(red: 0.975, green: 0.972, blue: 0.995),
+                        Color(red: 0.945, green: 0.925, blue: 0.985),
+                        Color(red: 0.982, green: 0.978, blue: 0.995)
                     ],
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
