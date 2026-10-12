@@ -490,8 +490,14 @@ private struct DeltaHomeTab: View {
     let selectedGame: DeltaGame
     @State private var antiBan = false
 
+    private var selectedCategory: PatchGameCategory {
+        selectedGame == .freeFire ? .normal : .max
+    }
+
     private var remoteItems: [PatchLibraryItem] {
-        patchStore.items
+        patchStore.items.filter {
+            PatchProjectLibrary.category(for: $0) == selectedCategory
+        }
     }
 
     private func featureCount(_ feature: PatchFeatureCategory) -> Int {
