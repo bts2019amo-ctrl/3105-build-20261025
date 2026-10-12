@@ -44,13 +44,7 @@ struct ContentView: View {
     }
 
     var body: some View {
-        Group {
-            if horizontalSizeClass == .regular {
-                regularLayout
-            } else {
-                compactLayout
-            }
-        }
+        DeltaClientShellView()
         .id(accentPalette)
         .tint(AppTheme.accent)
         .imageScale(.small)
