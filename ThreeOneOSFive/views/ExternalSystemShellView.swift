@@ -502,8 +502,8 @@ private struct DeltaTabBar: View {
                     } label: {
                         VStack(spacing: 3) {
                             Image(systemName: tab.icon)
-                                .font(.system(size: 15, weight: selectedTab == tab ? .bold : .medium))
-                                .frame(width: 48, height: 27)
+                                .font(.system(size: tab == .skin ? 20 : 15, weight: selectedTab == tab ? .bold : .medium))
+                                .frame(width: tab == .skin ? 56 : 48, height: tab == .skin ? 31 : 27)
                                 .background(selectedTab == tab ? DeltaColors.purple.opacity(0.13) : .clear, in: Capsule())
                                 .foregroundStyle(selectedTab == tab ? DeltaColors.purple : Color(red: 0.54, green: 0.58, blue: 0.66))
                             Text(isVietnamese ? tab.vietnameseTitle : tab.title)
@@ -597,7 +597,7 @@ private struct DeltaHomeTab: View {
                     remoteFeatureBadge("Avatar", icon: "person.crop.circle.fill", count: featureCount(.avatar))
                     remoteFeatureBadge("Hologram", icon: "wand.and.stars", count: featureCount(.hologram))
                     remoteFeatureBadge("Aimbot / ESP", icon: "scope", count: featureCount(.external))
-                    remoteFeatureBadge("Skin", icon: "tshirt.fill", count: featureCount(.skin))
+                    remoteFeatureBadge("Skin", icon: "tshirt.fill", count: featureCount(.skin), emphasized: true)
                 }
 
             }
@@ -613,10 +613,11 @@ private struct DeltaHomeTab: View {
         }
     }
 
-    private func remoteFeatureBadge(_ title: String, icon: String, count: Int) -> some View {
+    private func remoteFeatureBadge(_ title: String, icon: String, count: Int, emphasized: Bool = false) -> some View {
         VStack(spacing: 4) {
             Image(systemName: icon)
-                .font(.caption2)
+                .font(.system(size: emphasized ? 22 : 16, weight: .semibold))
+                .frame(width: emphasized ? 34 : 24, height: emphasized ? 28 : 22)
                 .foregroundStyle(DeltaColors.purple)
             Text(title)
                 .font(.system(size: 8, weight: .semibold))
@@ -626,7 +627,7 @@ private struct DeltaHomeTab: View {
                 .font(.system(size: 10, weight: .black, design: .rounded))
                 .foregroundStyle(DeltaColors.purple)
         }
-        .frame(maxWidth: .infinity, minHeight: 54)
+        .frame(maxWidth: .infinity, minHeight: emphasized ? 62 : 54)
         .background(Color(red: 0.97, green: 0.97, blue: 0.99), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 }
