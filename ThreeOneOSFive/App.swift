@@ -574,24 +574,16 @@ struct IOSKeyLoginView: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [
-                    Color(red: 0.965, green: 0.962, blue: 0.985),
-                    Color(red: 0.975, green: 0.970, blue: 0.992),
-                    Color(red: 0.965, green: 0.962, blue: 0.985)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+            Color(red: 0.965, green: 0.962, blue: 0.985)
                 .ignoresSafeArea()
 
             Circle()
-                .fill(AppTheme.accent.opacity(0.045))
+                .fill(AppTheme.accent.opacity(0.025))
                 .frame(width: 240, height: 240)
                 .blur(radius: 3)
                 .offset(x: 150, y: -330)
             Circle()
-                .fill(AppTheme.accent.opacity(0.035))
+                .fill(AppTheme.accent.opacity(0.018))
                 .frame(width: 210, height: 210)
                 .blur(radius: 2)
                 .offset(x: -160, y: 330)
@@ -652,7 +644,7 @@ struct IOSKeyLoginView: View {
                         }
                         .padding(.horizontal, 18)
                         .frame(height: 56)
-                        .background(Color.white.opacity(0.96))
+                        .background(AppTheme.accent.opacity(0.07))
                         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                         .overlay {
                             RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -667,7 +659,7 @@ struct IOSKeyLoginView: View {
                         } label: {
                             Group {
                                 if session.isChecking {
-                                    ProgressView().tint(.white)
+                                    ProgressView().tint(AppTheme.accent)
                                 } else {
                                     HStack(spacing: 12) {
                                         Text(language.text("login.enter"))
@@ -676,15 +668,16 @@ struct IOSKeyLoginView: View {
                                     .font(.system(size: 18, weight: .bold, design: .rounded))
                                 }
                             }
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Color(red: 0.30, green: 0.08, blue: 0.62))
                             .frame(maxWidth: .infinity)
                             .frame(height: 56)
                         }
-                        .background(
-                            LinearGradient(colors: [AppTheme.accent, Color(red: 0.34, green: 0.10, blue: 0.64)], startPoint: .leading, endPoint: .trailing),
-                            in: RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        )
-                        .shadow(color: AppTheme.accent.opacity(0.28), radius: 12, y: 6)
+                        .background(AppTheme.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                                .stroke(AppTheme.accent.opacity(0.24), lineWidth: 1)
+                        }
+                        .shadow(color: AppTheme.accent.opacity(0.10), radius: 10, y: 5)
                         .scaleEffect(pressed ? 0.97 : 1)
                         .disabled(session.isChecking)
 
@@ -718,7 +711,7 @@ struct IOSKeyLoginView: View {
                         }
                     }
                     .padding(24)
-                    .background(Color.white.opacity(0.96), in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+                    .background(AppTheme.accent.opacity(0.055), in: RoundedRectangle(cornerRadius: 26, style: .continuous))
                     .overlay {
                         RoundedRectangle(cornerRadius: 26, style: .continuous)
                             .stroke(Color.white.opacity(0.85), lineWidth: 1)
