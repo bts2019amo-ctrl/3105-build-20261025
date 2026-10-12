@@ -470,8 +470,21 @@ private struct DeltaTabBar: View {
 }
 
 private struct DeltaHomeTab: View {
+    @EnvironmentObject private var patchStore: PatchProjectStore
     let selectedGame: DeltaGame
     @State private var antiBan = false
+    @State private var showRemotePatches = false
+
+    private var remoteItems: [PatchLibraryItem] {
+        patchStore.items.filter { item in
+            let category = PatchProjectLibrary.category(for: item)
+            return selectedGame == .freeFire ? category == .normal : category == .max
+        }
+    }
+
+    private func featureCount(_ feature: PatchFeatureCategory) -> Int {
+        remoteItems.filter { PatchProjectLibrary.featureCategory(for: $0) == feature }.count
+    }
 
     var body: some View {
         VStack(spacing: 12) {
@@ -520,7 +533,84 @@ private struct DeltaHomeTab: View {
                     DeltaMetric("Lifetime", subtitle: "License", icon: "key.fill")
                 }
             }
+            DeltaCard {
+                HStack {
+                    DeltaSectionTitle("REMOTE PATCHES", icon: "arrow.down.circle.fill")
+                    Spacer()
+                    Button {
+                        patchStore.syncNow()
+                    } label: {
+                        Image(systemName: patchStore.remoteSyncState == .syncing ? "arrow.triangle.2.circlepath" : "arrow.clockwise")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(DeltaColors.purple)
+                            .rotationEffect(.degrees(patchStore.remoteSyncState == .syncing ? 180 : 0))
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                HStack(spacing: 7) {
+                    Circle()
+                        .fill(patchStore.remoteSyncState == .online ? Color.green : patchStore.remoteSyncState == .syncing ? Color.orange : Color.gray)
+                        .frame(width: 7, height: 7)
+                    Text(remoteStatusTitle)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(DeltaColors.muted)
+                    Spacer()
+                    Text("\(remoteItems.count) patches")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(DeltaColors.purple)
+                }
+
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 7) {
+                    remoteFeatureBadge("Cache", icon: "externaldrive.fill", count: featureCount(.cache))
+                    remoteFeatureBadge("Avatar", icon: "person.crop.circle.fill", count: featureCount(.avatar))
+                    remoteFeatureBadge("Hologram", icon: "wand.and.stars", count: featureCount(.hologram))
+                    remoteFeatureBadge("Aimbot / ESP", icon: "scope", count: featureCount(.external))
+                    remoteFeatureBadge("Skin", icon: "tshirt.fill", count: featureCount(.skin))
+                }
+
+                Button {
+                    showRemotePatches = true
+                } label: {
+                    Label("OPEN PATCH LIBRARY", systemImage: "shippingbox.fill")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity, minHeight: 40)
+                        .background(LinearGradient(colors: [DeltaColors.purpleDark, DeltaColors.purple], startPoint: .leading, endPoint: .trailing), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+                .buttonStyle(.plain)
+            }
+            .sheet(isPresented: $showRemotePatches) {
+                PatchProjectsView()
+                    .environmentObject(patchStore)
+            }
         }
+    }
+
+    private var remoteStatusTitle: String {
+        switch patchStore.remoteSyncState {
+        case .idle: return "Remote feed aguardando"
+        case .syncing: return "Sincronizando feed remoto..."
+        case .online: return "Feed remoto online"
+        case .offline: return "Feed remoto offline"
+        }
+    }
+
+    private func remoteFeatureBadge(_ title: String, icon: String, count: Int) -> some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.caption2)
+                .foregroundStyle(DeltaColors.purple)
+            Text(title)
+                .font(.system(size: 8, weight: .semibold))
+                .foregroundStyle(DeltaColors.ink)
+                .lineLimit(1)
+            Text("\(count)")
+                .font(.system(size: 10, weight: .black, design: .rounded))
+                .foregroundStyle(DeltaColors.purple)
+        }
+        .frame(maxWidth: .infinity, minHeight: 54)
+        .background(Color(red: 0.97, green: 0.97, blue: 0.99), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 }
 
