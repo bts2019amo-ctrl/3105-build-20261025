@@ -221,7 +221,7 @@ private struct DeltaGameSelectorView: View {
         ZStack {
             DeltaColors.page.ignoresSafeArea()
             VStack(spacing: 0) {
-                DeltaHeader(selectedGame: .constant(.freeFire), showEye: false)
+                DeltaHeader(selectedGame: .constant(.freeFire), showEye: false, showBack: false, onBack: {})
                     .padding(.top, 7)
                     .padding(.horizontal, 18)
 
