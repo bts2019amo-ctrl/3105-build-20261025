@@ -70,31 +70,37 @@ struct DeltaClientShellView: View {
 
 private enum DeltaRoute: Equatable { case splash, selector, dashboard }
 private enum DeltaGame: String, CaseIterable { case freeFire, freeFireMax }
-private enum DeltaTab: String, CaseIterable { case dashboard, aimbot, visual, misc, settings
+private enum DeltaTab: String, CaseIterable { case dashboard, cache, avatar, hologram, external, skin, settings
     var title: String {
         switch self {
         case .dashboard: return "Dashboard"
-        case .aimbot: return "Aimbot"
-        case .visual: return "Visual"
-        case .misc: return "Misc"
+        case .cache: return "Cache"
+        case .avatar: return "Avatar"
+        case .hologram: return "Hologram"
+        case .external: return "Aimbot / ESP"
+        case .skin: return "Skin"
         case .settings: return "Settings"
         }
     }
     var vietnameseTitle: String {
         switch self {
         case .dashboard: return "Trang chủ"
-        case .aimbot: return "Aimbot"
-        case .visual: return "Hình ảnh"
-        case .misc: return "Khác"
+        case .cache: return "Cache"
+        case .avatar: return "Avatar"
+        case .hologram: return "Hologram"
+        case .external: return "Aimbot / ESP"
+        case .skin: return "Skin"
         case .settings: return "Cài đặt"
         }
     }
     var icon: String {
         switch self {
         case .dashboard: return "house.fill"
-        case .aimbot: return "scope"
-        case .visual: return "eye.fill"
-        case .misc: return "bolt.fill"
+        case .cache: return "externaldrive.fill"
+        case .avatar: return "person.crop.circle.fill"
+        case .hologram: return "wand.and.stars"
+        case .external: return "scope"
+        case .skin: return "tshirt.fill"
         case .settings: return "gearshape.fill"
         }
     }
@@ -367,9 +373,11 @@ private struct DeltaDashboardView: View {
                     Group {
                         switch selectedTab {
                         case .dashboard: DeltaHomeTab(selectedGame: selectedGame)
-                        case .aimbot: DeltaAimbotTab()
-                        case .visual: DeltaVisualTab(showErrorBanner: $showErrorBanner)
-                        case .misc: DeltaMiscTab()
+                        case .cache: DeltaRemoteFeatureTab(feature: .cache, selectedGame: selectedGame)
+                        case .avatar: DeltaRemoteFeatureTab(feature: .avatar, selectedGame: selectedGame)
+                        case .hologram: DeltaRemoteFeatureTab(feature: .hologram, selectedGame: selectedGame)
+                        case .external: DeltaRemoteFeatureTab(feature: .external, selectedGame: selectedGame)
+                        case .skin: DeltaRemoteFeatureTab(feature: .skin, selectedGame: selectedGame)
                         case .settings: DeltaReferenceSettingsTab(languageCode: $languageCode, isVietnamese: isVietnamese, appState: appState, keySession: keySession)
                         }
                     }
@@ -439,29 +447,31 @@ private struct DeltaHeader: View {
 private struct DeltaTabBar: View {
     @Binding var selectedTab: DeltaTab
     let isVietnamese: Bool
-
     var body: some View {
-        HStack(spacing: 0) {
-            ForEach(DeltaTab.allCases, id: \.self) { tab in
-                Button {
-                    withAnimation(.spring(response: 0.34, dampingFraction: 0.84)) { selectedTab = tab }
-                } label: {
-                    VStack(spacing: 3) {
-                        Image(systemName: tab.icon)
-                            .font(.system(size: 16, weight: selectedTab == tab ? .bold : .medium))
-                            .frame(width: 48, height: 27)
-                            .background(selectedTab == tab ? DeltaColors.purple.opacity(0.13) : .clear, in: Capsule())
-                            .foregroundStyle(selectedTab == tab ? DeltaColors.purple : Color(red: 0.54, green: 0.58, blue: 0.66))
-                        Text(isVietnamese ? tab.vietnameseTitle : tab.title)
-                            .font(.system(size: 9, weight: selectedTab == tab ? .bold : .medium))
-                            .foregroundStyle(selectedTab == tab ? DeltaColors.purple : Color(red: 0.54, green: 0.58, blue: 0.66))
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 2) {
+                ForEach(DeltaTab.allCases, id: \.self) { tab in
+                    Button {
+                        withAnimation(.spring(response: 0.34, dampingFraction: 0.84)) { selectedTab = tab }
+                    } label: {
+                        VStack(spacing: 3) {
+                            Image(systemName: tab.icon)
+                                .font(.system(size: 15, weight: selectedTab == tab ? .bold : .medium))
+                                .frame(width: 48, height: 27)
+                                .background(selectedTab == tab ? DeltaColors.purple.opacity(0.13) : .clear, in: Capsule())
+                                .foregroundStyle(selectedTab == tab ? DeltaColors.purple : Color(red: 0.54, green: 0.58, blue: 0.66))
+                            Text(isVietnamese ? tab.vietnameseTitle : tab.title)
+                                .font(.system(size: 8, weight: selectedTab == tab ? .bold : .medium))
+                                .foregroundStyle(selectedTab == tab ? DeltaColors.purple : Color(red: 0.54, green: 0.58, blue: 0.66))
+                                .lineLimit(1)
+                        }
+                        .frame(width: 74)
                     }
-                    .frame(maxWidth: .infinity)
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
+            .padding(.horizontal, 7)
         }
-        .padding(.horizontal, 7)
         .padding(.top, 7)
         .padding(.bottom, 5)
         .background(.ultraThinMaterial)
@@ -611,6 +621,126 @@ private struct DeltaHomeTab: View {
         }
         .frame(maxWidth: .infinity, minHeight: 54)
         .background(Color(red: 0.97, green: 0.97, blue: 0.99), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+}
+
+private struct DeltaRemoteFeatureTab: View {
+    @EnvironmentObject private var patchStore: PatchProjectStore
+    let feature: PatchFeatureCategory
+    let selectedGame: DeltaGame
+    @State private var showLibrary = false
+
+    private var items: [PatchLibraryItem] {
+        patchStore.items.filter {
+            PatchProjectLibrary.featureCategory(for: $0) == feature
+                && PatchProjectLibrary.category(for: $0) == (selectedGame == .freeFire ? .normal : .max)
+        }
+    }
+
+    private var title: String {
+        switch feature {
+        case .cache: return "CACHE PATCHES"
+        case .avatar: return "AVATAR PATCHES"
+        case .hologram: return "HOLOGRAM PATCHES"
+        case .external: return "AIMBOT / ESP PATCHES"
+        case .skin: return "SKIN PATCHES"
+        }
+    }
+
+    private var icon: String {
+        switch feature {
+        case .cache: return "externaldrive.fill"
+        case .avatar: return "person.crop.circle.fill"
+        case .hologram: return "wand.and.stars"
+        case .external: return "scope"
+        case .skin: return "tshirt.fill"
+        }
+    }
+
+    var body: some View {
+        VStack(spacing: 12) {
+            DeltaCard {
+                HStack {
+                    DeltaSectionTitle(title, icon: icon)
+                    Spacer()
+                    Text("\(items.count) REMOTE")
+                        .font(.system(size: 8, weight: .black))
+                        .foregroundStyle(DeltaColors.purple)
+                }
+                Text("Selecione um patch remoto para o jogo atual e abra a biblioteca para aplicar com segurança.")
+                    .font(.caption)
+                    .foregroundStyle(DeltaColors.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if items.isEmpty {
+                DeltaCard {
+                    VStack(spacing: 10) {
+                        Image(systemName: "shippingbox")
+                            .font(.system(size: 28, weight: .light))
+                            .foregroundStyle(DeltaColors.purple)
+                        Text(patchStore.remoteSyncState == .syncing ? "Sincronizando patches remotos..." : "Nenhum patch nesta categoria ainda")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(DeltaColors.ink)
+                            .multilineTextAlignment(.center)
+                        Text("Use o botão abaixo para abrir a biblioteca completa e atualizar o feed remoto.")
+                            .font(.caption)
+                            .foregroundStyle(DeltaColors.muted)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 22)
+                }
+            } else {
+                ForEach(items) { item in
+                    DeltaCard {
+                        HStack(spacing: 10) {
+                            if PatchProjectLibrary.featureCategory(for: item) == .skin,
+                               let iconURL = PatchProjectLibrary.remoteIconURL(for: item.id) {
+                                AsyncImage(url: iconURL) { phase in
+                                    if let image = phase.image { image.resizable().scaledToFill() } else { Image(systemName: icon).resizable().scaledToFit().padding(10).foregroundStyle(DeltaColors.purple) }
+                                }
+                                .frame(width: 42, height: 42)
+                                .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
+                            } else {
+                                Image(systemName: icon)
+                                    .font(.title3)
+                                    .foregroundStyle(DeltaColors.purple)
+                                    .frame(width: 42, height: 42)
+                                    .background(DeltaColors.purple.opacity(0.10), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                            }
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(item.project?.name ?? item.packageURL.deletingPathExtension().lastPathComponent)
+                                    .font(.subheadline.weight(.bold))
+                                    .foregroundStyle(DeltaColors.ink)
+                                    .lineLimit(1)
+                                Text(item.isLocked ? "Protected remote patch" : "Ready to apply")
+                                    .font(.caption2)
+                                    .foregroundStyle(DeltaColors.muted)
+                            }
+                            Spacer()
+                            Image(systemName: item.isLocked ? "lock.fill" : "checkmark.circle.fill")
+                                .foregroundStyle(item.isLocked ? .orange : .green)
+                        }
+                    }
+                }
+            }
+
+            Button {
+                showLibrary = true
+            } label: {
+                Label("OPEN PATCH LIBRARY", systemImage: "shippingbox.fill")
+                    .font(.caption.weight(.bold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity, minHeight: 42)
+                    .background(LinearGradient(colors: [DeltaColors.purpleDark, DeltaColors.purple], startPoint: .leading, endPoint: .trailing), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+            }
+            .buttonStyle(.plain)
+        }
+        .sheet(isPresented: $showLibrary) {
+            PatchProjectsView(initialFeature: feature)
+                .environmentObject(patchStore)
+        }
     }
 }
 

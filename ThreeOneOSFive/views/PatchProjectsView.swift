@@ -36,6 +36,7 @@ struct PatchProjectsView: View {
     @State private var showGameSelection = true
     @State private var isRefreshing = false
     @State private var launchMessage: String?
+    private let initialFeature: PatchFeatureCategory?
     let onOpenSettings: () -> Void
     let onOpenLogs: () -> Void
 
@@ -90,10 +91,13 @@ struct PatchProjectsView: View {
 
     init(
         onOpenSettings: @escaping () -> Void = {},
-        onOpenLogs: @escaping () -> Void = {}
+        onOpenLogs: @escaping () -> Void = {},
+        initialFeature: PatchFeatureCategory? = nil
     ) {
         self.onOpenSettings = onOpenSettings
         self.onOpenLogs = onOpenLogs
+        self.initialFeature = initialFeature
+        _selectedFeature = State(initialValue: initialFeature ?? PatchProjectLibrary.selectedFeatureCategory)
     }
 
     var body: some View {
