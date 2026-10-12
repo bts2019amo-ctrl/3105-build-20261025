@@ -576,9 +576,9 @@ struct IOSKeyLoginView: View {
         ZStack {
             LinearGradient(
                 colors: [
-                    Color(red: 0.98, green: 0.97, blue: 1.0),
-                    Color(red: 0.94, green: 0.90, blue: 0.99),
-                    Color(red: 0.99, green: 0.98, blue: 1.0)
+                    Color(red: 0.965, green: 0.962, blue: 0.985),
+                    Color(red: 0.975, green: 0.970, blue: 0.992),
+                    Color(red: 0.965, green: 0.962, blue: 0.985)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -586,12 +586,12 @@ struct IOSKeyLoginView: View {
                 .ignoresSafeArea()
 
             Circle()
-                .fill(AppTheme.accent.opacity(0.12))
+                .fill(AppTheme.accent.opacity(0.045))
                 .frame(width: 240, height: 240)
                 .blur(radius: 3)
                 .offset(x: 150, y: -330)
             Circle()
-                .fill(Color.purple.opacity(0.08))
+                .fill(AppTheme.accent.opacity(0.035))
                 .frame(width: 210, height: 210)
                 .blur(radius: 2)
                 .offset(x: -160, y: 330)
@@ -608,12 +608,12 @@ struct IOSKeyLoginView: View {
                     Text(language.text("brand.external_system"))
                         .font(.system(size: 29, weight: .black, design: .rounded))
                         .tracking(1.1)
-                        .foregroundStyle(AppTheme.accent)
+                        .foregroundStyle(Color(red: 0.10, green: 0.08, blue: 0.29))
                         .opacity(appeared ? 1 : 0)
 
                     Text(language.text("login.subtitle"))
                         .font(.system(size: 15, weight: .medium, design: .rounded))
-                        .foregroundStyle(Color(red: 0.35, green: 0.34, blue: 0.43))
+                        .foregroundStyle(Color(red: 0.46, green: 0.48, blue: 0.56))
                         .multilineTextAlignment(.center)
                         .padding(.top, 10)
                         .padding(.horizontal, 20)
@@ -652,7 +652,7 @@ struct IOSKeyLoginView: View {
                         }
                         .padding(.horizontal, 18)
                         .frame(height: 56)
-                        .background(Color.white.opacity(0.92))
+                        .background(Color.white.opacity(0.96))
                         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                         .overlay {
                             RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -718,7 +718,7 @@ struct IOSKeyLoginView: View {
                         }
                     }
                     .padding(24)
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+                    .background(Color.white.opacity(0.96), in: RoundedRectangle(cornerRadius: 26, style: .continuous))
                     .overlay {
                         RoundedRectangle(cornerRadius: 26, style: .continuous)
                             .stroke(Color.white.opacity(0.85), lineWidth: 1)
@@ -731,7 +731,7 @@ struct IOSKeyLoginView: View {
 
                     Label(language.text("login.official_version"), systemImage: "checkmark.shield.fill")
                         .font(.system(size: 15, weight: .regular, design: .rounded))
-                        .foregroundStyle(Color(red: 0.35, green: 0.34, blue: 0.43))
+                        .foregroundStyle(Color(red: 0.46, green: 0.48, blue: 0.56))
                         .padding(.top, 34)
 
                     Spacer(minLength: 48)
