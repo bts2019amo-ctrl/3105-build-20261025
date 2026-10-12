@@ -444,7 +444,7 @@ private struct DeltaDashboardView: View {
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            DeltaTabBar(selectedTab: $selectedTab, isVietnamese: isVietnamese)
+            DeltaTabBar(selectedTab: $selectedTab, selectedGame: selectedGame, isVietnamese: isVietnamese)
         }
         .animation(.easeInOut(duration: 0.22), value: selectedTab)
         .animation(.easeInOut(duration: 0.22), value: showErrorBanner)
@@ -491,37 +491,141 @@ private struct DeltaHeader: View {
 }
 
 private struct DeltaTabBar: View {
+    @EnvironmentObject private var patchStore: PatchProjectStore
     @Binding var selectedTab: DeltaTab
+    let selectedGame: DeltaGame
     let isVietnamese: Bool
+
+    private let patchTabs: [DeltaTab] = [.cache, .avatar, .hologram, .external, .skin]
+
+    private var selectedCategory: PatchGameCategory {
+        selectedGame == .freeFire ? .normal : .max
+    }
+
+    private func patchCount(for tab: DeltaTab) -> Int {
+        guard let feature = PatchFeatureCategory(rawValue: tab.rawValue) else { return 0 }
+        return patchStore.items.filter {
+            PatchProjectLibrary.category(for: $0) == selectedCategory &&
+            PatchProjectLibrary.featureCategory(for: $0) == feature
+        }.count
+    }
+
+    private func select(_ tab: DeltaTab) {
+        withAnimation(.spring(response: 0.34, dampingFraction: 0.84)) {
+            selectedTab = tab
+        }
+    }
+
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 2) {
-                ForEach(DeltaTab.allCases, id: \.self) { tab in
-                    Button {
-                        withAnimation(.spring(response: 0.34, dampingFraction: 0.84)) { selectedTab = tab }
-                    } label: {
-                        VStack(spacing: 3) {
-                            Image(systemName: tab.icon)
-                                .font(.system(size: tab == .skin ? 20 : 15, weight: selectedTab == tab ? .bold : .medium))
-                                .frame(width: tab == .skin ? 56 : 48, height: tab == .skin ? 31 : 27)
-                                .background(selectedTab == tab ? DeltaColors.purple.opacity(0.13) : .clear, in: Capsule())
-                                .foregroundStyle(selectedTab == tab ? DeltaColors.purple : Color(red: 0.54, green: 0.58, blue: 0.66))
-                            Text(isVietnamese ? tab.vietnameseTitle : tab.title)
-                                .font(.system(size: 8, weight: selectedTab == tab ? .bold : .medium))
-                                .foregroundStyle(selectedTab == tab ? DeltaColors.purple : Color(red: 0.54, green: 0.58, blue: 0.66))
-                                .lineLimit(1)
-                        }
-                        .frame(width: 74)
-                    }
-                    .buttonStyle(.plain)
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                DeltaCompactTabButton(tab: .dashboard, selectedTab: selectedTab, title: isVietnamese ? DeltaTab.dashboard.vietnameseTitle : DeltaTab.dashboard.title) {
+                    select(.dashboard)
+                }
+                DeltaCompactTabButton(tab: .settings, selectedTab: selectedTab, title: isVietnamese ? DeltaTab.settings.vietnameseTitle : DeltaTab.settings.title) {
+                    select(.settings)
                 }
             }
-            .padding(.horizontal, 7)
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                ForEach(patchTabs.prefix(4), id: \.self) { tab in
+                    DeltaCategoryCard(
+                        tab: tab,
+                        title: isVietnamese ? tab.vietnameseTitle : tab.title,
+                        count: patchCount(for: tab),
+                        isSelected: selectedTab == tab,
+                        action: { select(tab) }
+                    )
+                }
+                if let skin = patchTabs.last {
+                    DeltaCategoryCard(
+                        tab: skin,
+                        title: isVietnamese ? skin.vietnameseTitle : skin.title,
+                        count: patchCount(for: skin),
+                        isSelected: selectedTab == skin,
+                        action: { select(skin) }
+                    )
+                    .gridCellColumns(2)
+                }
+            }
         }
-        .padding(.top, 7)
-        .padding(.bottom, 5)
-        .background(.ultraThinMaterial)
+        .padding(.horizontal, 14)
+        .padding(.top, 10)
+        .padding(.bottom, 12)
+        .background(.regularMaterial)
         .overlay(alignment: .top) { Divider().opacity(0.20) }
+    }
+}
+
+private struct DeltaCompactTabButton: View {
+    let tab: DeltaTab
+    let selectedTab: DeltaTab
+    let title: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 7) {
+                Image(systemName: tab.icon)
+                    .font(.system(size: 13, weight: .bold))
+                Text(title)
+                    .font(.system(size: 11, weight: .bold))
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .bold))
+            }
+            .foregroundStyle(selectedTab == tab ? DeltaColors.purple : DeltaColors.muted)
+            .padding(.horizontal, 12)
+            .frame(height: 34)
+            .background(selectedTab == tab ? DeltaColors.purple.opacity(0.12) : Color.white.opacity(0.72), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct DeltaCategoryCard: View {
+    let tab: DeltaTab
+    let title: String
+    let count: Int
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: tab.icon)
+                    .font(.system(size: tab == .skin ? 22 : 18, weight: .bold))
+                    .foregroundStyle(isSelected ? .white : DeltaColors.purple)
+                    .frame(width: 38, height: 38)
+                    .background(isSelected ? Color.white.opacity(0.20) : DeltaColors.purple.opacity(0.11), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 12, weight: .bold))
+                        .lineLimit(1)
+                    Text("\(count) patches")
+                        .font(.system(size: 10, weight: .medium))
+                        .opacity(isSelected ? 0.82 : 0.62)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "chevron.right")
+                    .font(.system(size: 13, weight: .bold))
+                    .opacity(isSelected ? 1 : 0.42)
+            }
+            .foregroundStyle(isSelected ? .white : DeltaColors.ink)
+            .padding(.horizontal, 11)
+            .frame(minHeight: 61)
+            .background(
+                isSelected
+                    ? AnyShapeStyle(LinearGradient(colors: [DeltaColors.purpleDark, DeltaColors.purple], startPoint: .topLeading, endPoint: .bottomTrailing))
+                    : AnyShapeStyle(Color.white.opacity(0.80)),
+                in: RoundedRectangle(cornerRadius: 15, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 15, style: .continuous)
+                    .stroke(isSelected ? Color.white.opacity(0.18) : DeltaColors.purple.opacity(0.08), lineWidth: 1)
+            }
+            .shadow(color: isSelected ? DeltaColors.purple.opacity(0.18) : .black.opacity(0.04), radius: 8, y: 3)
+        }
+        .buttonStyle(.plain)
     }
 }
 
