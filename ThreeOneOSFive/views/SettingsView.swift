@@ -133,7 +133,7 @@ struct SettingsView: View {
                 Spacer()
                 Toggle("", isOn: $streamProof)
                     .labelsHidden()
-                    .toggleStyle(ReferenceSwitchStyle())
+                    .toggleStyle(ReferenceToggleStyle())
             }
             .padding(.top, 12)
         }
@@ -439,7 +439,7 @@ private struct SupportBadge: View {
     }
 }
 
-private struct ReferenceSwitchStyle: ToggleStyle {
+private struct ReferenceToggleStyle: ToggleStyle {
     func makeBody(configuration: Configuration) -> some View {
         RoundedRectangle(cornerRadius: 17, style: .continuous)
             .fill(configuration.isOn ? AppTheme.accent : Color.gray.opacity(0.28))
