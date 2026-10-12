@@ -483,7 +483,6 @@ private struct DeltaHomeTab: View {
     @EnvironmentObject private var patchStore: PatchProjectStore
     let selectedGame: DeltaGame
     @State private var antiBan = false
-    @State private var showRemotePatches = false
 
     private var remoteItems: [PatchLibraryItem] {
         patchStore.items.filter { item in
@@ -579,20 +578,6 @@ private struct DeltaHomeTab: View {
                     remoteFeatureBadge("Skin", icon: "tshirt.fill", count: featureCount(.skin))
                 }
 
-                Button {
-                    showRemotePatches = true
-                } label: {
-                    Label("OPEN PATCH LIBRARY", systemImage: "shippingbox.fill")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity, minHeight: 40)
-                        .background(LinearGradient(colors: [DeltaColors.purpleDark, DeltaColors.purple], startPoint: .leading, endPoint: .trailing), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                }
-                .buttonStyle(.plain)
-            }
-            .sheet(isPresented: $showRemotePatches) {
-                PatchProjectsView()
-                    .environmentObject(patchStore)
             }
         }
     }
@@ -628,7 +613,6 @@ private struct DeltaRemoteFeatureTab: View {
     @EnvironmentObject private var patchStore: PatchProjectStore
     let feature: PatchFeatureCategory
     let selectedGame: DeltaGame
-    @State private var showLibrary = false
 
     private var items: [PatchLibraryItem] {
         patchStore.items.filter {
@@ -719,27 +703,32 @@ private struct DeltaRemoteFeatureTab: View {
                                     .foregroundStyle(DeltaColors.muted)
                             }
                             Spacer()
-                            Image(systemName: item.isLocked ? "lock.fill" : "checkmark.circle.fill")
-                                .foregroundStyle(item.isLocked ? .orange : .green)
+                            let isApplied = DevicePatchService.latestReceipt(projectID: item.id) != nil
+                            Button {
+                                if isApplied {
+                                    patchStore.alert = PatchStoreAlert(titleKey: "common.done", messageKey: "patch.error.already_applied")
+                                } else if item.isLocked {
+                                    patchStore.requestUnlock(for: item)
+                                } else {
+                                    patchStore.applyInline(item)
+                                }
+                            } label: {
+                                Label(
+                                    isApplied ? "APPLIED" : item.isLocked ? "UNLOCK" : "APPLY",
+                                    systemImage: isApplied ? "checkmark.circle.fill" : item.isLocked ? "lock.fill" : "play.fill"
+                                )
+                                .font(.system(size: 8, weight: .black))
+                                .foregroundStyle(isApplied ? .green : .white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 6)
+                                .background(isApplied ? Color.green.opacity(0.12) : DeltaColors.purple, in: Capsule())
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(patchStore.isBusy && !item.isLocked)
                         }
                     }
                 }
             }
-
-            Button {
-                showLibrary = true
-            } label: {
-                Label("OPEN PATCH LIBRARY", systemImage: "shippingbox.fill")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity, minHeight: 42)
-                    .background(LinearGradient(colors: [DeltaColors.purpleDark, DeltaColors.purple], startPoint: .leading, endPoint: .trailing), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
-            }
-            .buttonStyle(.plain)
-        }
-        .sheet(isPresented: $showLibrary) {
-            PatchProjectsView(initialFeature: feature)
-                .environmentObject(patchStore)
         }
     }
 }

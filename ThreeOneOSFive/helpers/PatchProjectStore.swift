@@ -609,6 +609,46 @@ final class PatchProjectStore: ObservableObject {
         }
     }
 
+    func applyInline(_ item: PatchLibraryItem) {
+        guard !isBusy else { return }
+        guard let project = item.project else {
+            requestUnlock(for: item)
+            return
+        }
+        guard DevicePatchService.latestReceipt(projectID: item.id) == nil else {
+            alert = PatchStoreAlert(
+                titleKey: "common.done",
+                messageKey: "patch.error.already_applied"
+            )
+            return
+        }
+        isBusy = true
+        Task.detached(priority: .userInitiated) { [weak self] in
+            do {
+                let synchronized = item.summary.schemaVersion >= 2 && item.canInspectContents
+                    ? try PatchProjectLibrary.synchronizeWorkspace(item: item)
+                    : project
+                _ = try DevicePatchService.apply(project: synchronized)
+                await self?.finishInlineApply(success: true)
+            } catch let error as PatchPackageError {
+                await self?.failOperation(error)
+            } catch {
+                await self?.failOperation(.applyFailed)
+            }
+        }
+    }
+
+    private func finishInlineApply(success: Bool) {
+        reload()
+        isBusy = false
+        if success {
+            alert = PatchStoreAlert(
+                titleKey: "common.done",
+                messageKey: "patch.applied_message"
+            )
+        }
+    }
+
     private func finishWorkspaceSynchronization(reportsSuccess: Bool) {
         reload()
         isBusy = false
