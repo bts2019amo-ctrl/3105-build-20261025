@@ -126,7 +126,7 @@ private struct DeltaSplashView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pulse = false
     @State private var loadingIndex = 0
-    private let messages = ["Initializing Delta Core...", "Loading Injector Engine...", "Preparing dashboard..."]
+    private let messages = ["Initializing EXTERNAL SYSTEM Core...", "Loading Injector Engine...", "Preparing dashboard..."]
 
     var body: some View {
         ZStack {
@@ -312,10 +312,10 @@ private struct DeltaAnnouncementView: View {
                 ZStack(alignment: .bottomLeading) {
                     LinearGradient(colors: [DeltaColors.purpleDark, DeltaColors.purple], startPoint: .topLeading, endPoint: .bottomTrailing)
                     VStack(alignment: .leading, spacing: 0) {
-                        Text("DELTA")
+                        Text("EXTERNAL")
                             .font(.system(size: 40, weight: .black, design: .rounded))
                             .foregroundStyle(.white.opacity(0.95))
-                        Text("CLIENT")
+                        Text("SYSTEM")
                             .font(.system(size: 31, weight: .black, design: .rounded))
                             .foregroundStyle(.white.opacity(0.85))
                     }
@@ -331,7 +331,7 @@ private struct DeltaAnnouncementView: View {
                         Spacer()
                         Button(action: dismiss) { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) }
                     }
-                    Text(isVietnamese ? "Hiện Tại Chỉ Sử Dụng Được Aimbot Và AimBot Vector\n\nDelta Cảm Ơn Các Bạn Đã Đợi Phiên Bản Mới Của Delta.\n\nCó Lỗi Gì Cứ Góp Ý Nhé, Chân Thành Cảm Ơn Các Bạn" : "Hello everyone, this is a beta test version.\n\nCurrently, only AimBot and AimBot Vector are available for use.\n\nDelta thanks you all for waiting for the new version of Delta.\n\nIf you encounter any bugs or issues, feel free to give feedback. Thank you very much!")
+                    Text(isVietnamese ? "Hiện Tại Chỉ Sử Dụng Được Aimbot Và AimBot Vector\n\nEXTERNAL SYSTEM cảm ơn các bạn đã đợi phiên bản mới.\n\nCó lỗi gì cứ góp ý nhé, chân thành cảm ơn các bạn" : "Hello everyone, this is a beta test version.\n\nCurrently, only AimBot and AimBot Vector are available for use.\n\nEXTERNAL SYSTEM thanks you all for waiting for the new version.\n\nIf you encounter any bugs or issues, feel free to give feedback. Thank you very much!")
                         .font(.subheadline)
                         .foregroundStyle(DeltaColors.ink)
                         .fixedSize(horizontal: false, vertical: true)
@@ -501,7 +501,7 @@ private struct DeltaHomeTab: View {
     var body: some View {
         VStack(spacing: 12) {
             DeltaCard {
-                Label("Welcome DELTA back! Have a good day.", systemImage: "sparkles")
+                Label("Welcome back to EXTERNAL SYSTEM! Have a good day.", systemImage: "sparkles")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(DeltaColors.ink)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -539,7 +539,7 @@ private struct DeltaHomeTab: View {
             DeltaCard {
                 DeltaSectionTitle("SYSTEM OVERVIEW", icon: "chart.bar.fill")
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                    DeltaMetric("v3.1.5", subtitle: "Delta Engine", icon: "info.circle.fill")
+                    DeltaMetric("v3.1.5", subtitle: "EXTERNAL SYSTEM Engine", icon: "info.circle.fill")
                     DeltaMetric("RW Active", subtitle: "Memory Hook", icon: "rectangle.connected.to.line.below")
                     DeltaMetric("Standby", subtitle: "Anti-Ban Mode", icon: "shield")
                     DeltaMetric("Lifetime", subtitle: "License", icon: "key.fill")
@@ -889,7 +889,7 @@ private struct DeltaReferenceSettingsTab: View {
             }
             DeltaCard {
                 DeltaSectionTitle(isVietnamese ? "THÔNG TIN BẢN QUYỀN" : "LICENSE INFORMATION", icon: "key.fill")
-                DeltaInfoRow(isVietnamese ? "Bản quyền:" : "License:", value: "DELTA")
+                DeltaInfoRow(isVietnamese ? "Bản quyền:" : "License:", value: "EXTERNAL SYSTEM")
                 DeltaInfoRow(isVietnamese ? "Hạn dùng:" : "Expired:", value: "Lifetime")
                 HStack {
                     Text("UUID:").font(.caption).foregroundStyle(DeltaColors.muted)
