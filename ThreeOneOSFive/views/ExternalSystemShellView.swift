@@ -13,6 +13,8 @@ struct ExternalSystemShellView: View {
     @State private var selectedTab: DeltaTab = .dashboard
     @State private var showAnnouncement = false
     @State private var showErrorBanner = false
+    @AppStorage("externalSystem.streamProofEnabled") private var streamProofEnabled = false
+    @State private var isScreenCaptured = UIScreen.main.isCaptured
 
     private var isVietnamese: Bool { languageCode == AppLanguage.vietnamese.rawValue }
     private var motion: Animation? { reduceMotion ? nil : .easeInOut(duration: 0.28) }
@@ -54,6 +56,22 @@ struct ExternalSystemShellView: View {
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .zIndex(10)
             }
+
+            if streamProofEnabled && isScreenCaptured {
+                Color.black
+                    .ignoresSafeArea()
+                    .overlay {
+                        VStack(spacing: 10) {
+                            Image(systemName: "eye.slash.fill")
+                                .font(.system(size: 28, weight: .bold))
+                            Text(isVietnamese ? "Conteúdo protegido" : "Protected content")
+                                .font(.headline.weight(.bold))
+                        }
+                        .foregroundStyle(.white)
+                    }
+                    .transition(.opacity)
+                    .zIndex(20)
+            }
         }
         .background(DeltaColors.page.ignoresSafeArea())
         .animation(motion, value: route)
@@ -71,6 +89,9 @@ struct ExternalSystemShellView: View {
         }
         .onChange(of: selectedGame) { _ in
             patchStore.syncNow()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIScreen.capturedDidChangeNotification)) { _ in
+            isScreenCaptured = UIScreen.main.isCaptured
         }
     }
 }
@@ -488,7 +509,6 @@ private struct DeltaTabBar: View {
 private struct DeltaHomeTab: View {
     @EnvironmentObject private var patchStore: PatchProjectStore
     let selectedGame: DeltaGame
-    @State private var antiBan = false
 
     private var selectedCategory: PatchGameCategory {
         selectedGame == .freeFire ? .normal : .max
@@ -523,32 +543,6 @@ private struct DeltaHomeTab: View {
                     }
                     Spacer()
                     DeltaStatusBadge(text: "ACTIVE")
-                }
-            }
-            DeltaCard {
-                DeltaSectionTitle("SECURITY & ANTI-BAN", icon: "shield.fill")
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Anti-Ban Engine").font(.subheadline.weight(.semibold)).foregroundStyle(DeltaColors.ink)
-                        Text("Standing By").font(.caption2).foregroundStyle(DeltaColors.muted)
-                    }
-                    Spacer()
-                    Toggle("", isOn: $antiBan).labelsHidden().toggleStyle(DeltaToggleStyle())
-                }
-                HStack {
-                    Text("ANTI-BAN LOG").font(.caption2.weight(.bold)).foregroundStyle(DeltaColors.purple)
-                    Spacer()
-                    Image(systemName: "arrow.clockwise").font(.caption2.bold()).foregroundStyle(DeltaColors.purple)
-                }
-                Text("No log yet. Open the game so the patch runs.").font(.caption2.monospaced()).foregroundStyle(.white).padding(8).frame(maxWidth: .infinity, alignment: .leading).background(Color(red: 0.08, green: 0.08, blue: 0.12), in: RoundedRectangle(cornerRadius: 7))
-            }
-            DeltaCard {
-                DeltaSectionTitle("SYSTEM OVERVIEW", icon: "chart.bar.fill")
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                    DeltaMetric("v3.1.5", subtitle: "EXTERNAL SYSTEM Engine", icon: "info.circle.fill")
-                    DeltaMetric("RW Active", subtitle: "Memory Hook", icon: "rectangle.connected.to.line.below")
-                    DeltaMetric("Standby", subtitle: "Anti-Ban Mode", icon: "shield")
-                    DeltaMetric("Lifetime", subtitle: "License", icon: "key.fill")
                 }
             }
             DeltaCard {
@@ -883,9 +877,11 @@ private struct DeltaReferenceSettingsTab: View {
     let isVietnamese: Bool
     let appState: AppState
     let keySession: IOSKeySession
-    @State private var streamProof = false
+    @AppStorage("externalSystem.streamProofEnabled") private var streamProof = false
     @State private var copied = false
-    @State private var uuid = UUID().uuidString.uppercased()
+    private var deviceUID: String {
+        UIDevice.current.identifierForVendor?.uuidString.uppercased() ?? "UNAVAILABLE"
+    }
 
     var body: some View {
         VStack(spacing: 12) {
@@ -898,10 +894,10 @@ private struct DeltaReferenceSettingsTab: View {
                 DeltaInfoRow(isVietnamese ? "Bản quyền:" : "License:", value: "EXTERNAL SYSTEM")
                 DeltaInfoRow(isVietnamese ? "Hạn dùng:" : "Expired:", value: "Lifetime")
                 HStack {
-                    Text("UUID:").font(.caption).foregroundStyle(DeltaColors.muted)
+                    Text("UID:").font(.caption).foregroundStyle(DeltaColors.muted)
                     Spacer()
                     Button {
-                        UIPasteboard.general.string = uuid
+                        UIPasteboard.general.string = deviceUID
                         withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) { copied = true }
                         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { withAnimation { copied = false } }
                     } label: {
@@ -909,7 +905,7 @@ private struct DeltaReferenceSettingsTab: View {
                             .font(.caption.weight(.bold)).foregroundStyle(.white).padding(.horizontal, 10).padding(.vertical, 5).background(DeltaColors.purple, in: Capsule())
                     }.buttonStyle(.plain)
                 }
-                Text("IV-110A980E-961C-4AC1-9DA7-02D66DFCFE10").font(.system(size: 8, design: .monospaced)).foregroundStyle(DeltaColors.ink).lineLimit(1).minimumScaleFactor(0.6)
+                Text(deviceUID).font(.system(size: 8, design: .monospaced)).foregroundStyle(DeltaColors.ink).lineLimit(1).minimumScaleFactor(0.6)
             }
             DeltaCard {
                 DeltaSectionTitle(isVietnamese ? "TƯƠNG THÍCH HỆ ĐIỀU HÀNH" : "SYSTEM COMPATIBILITY", icon: "apple.logo")
