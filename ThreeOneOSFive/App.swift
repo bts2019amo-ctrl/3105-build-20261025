@@ -626,7 +626,7 @@ struct IOSKeyLoginView: View {
                                 }
                             }
                             .font(.system(size: 17, weight: .regular, design: .rounded))
-                            .foregroundStyle(Color(red: 0.12, green: 0.10, blue: 0.23))
+                            .foregroundStyle(Color.white.opacity(0.92))
                             .tint(Color(red: 0.53, green: 0.18, blue: 0.86))
                             .textInputAutocapitalization(.characters)
                             .autocorrectionDisabled()
@@ -636,7 +636,7 @@ struct IOSKeyLoginView: View {
                             } label: {
                                 Image(systemName: isKeyVisible ? "eye.slash.fill" : "eye.fill")
                                     .font(.system(size: 19, weight: .semibold))
-                                    .foregroundStyle(Color(red: 0.53, green: 0.18, blue: 0.86).opacity(0.78))
+                                    .foregroundStyle(Color.white.opacity(0.86))
                                     .frame(width: 28, height: 36)
                             }
                             .buttonStyle(.plain)
@@ -644,7 +644,7 @@ struct IOSKeyLoginView: View {
                         }
                         .padding(.horizontal, 18)
                         .frame(height: 56)
-                        .background(Color(red: 0.53, green: 0.18, blue: 0.86).opacity(0.07))
+                        .background(Color(red: 0.53, green: 0.18, blue: 0.86).opacity(0.22))
                         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                         .overlay {
                             RoundedRectangle(cornerRadius: 18, style: .continuous)
@@ -668,11 +668,11 @@ struct IOSKeyLoginView: View {
                                     .font(.system(size: 18, weight: .bold, design: .rounded))
                                 }
                             }
-                            .foregroundStyle(Color(red: 0.30, green: 0.08, blue: 0.62))
+                            .foregroundStyle(Color.white.opacity(0.92))
                             .frame(maxWidth: .infinity)
                             .frame(height: 56)
                         }
-                        .background(Color(red: 0.53, green: 0.18, blue: 0.86).opacity(0.14), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .background(Color(red: 0.53, green: 0.18, blue: 0.86).opacity(0.24), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                         .overlay {
                             RoundedRectangle(cornerRadius: 18, style: .continuous)
                                 .stroke(Color(red: 0.53, green: 0.18, blue: 0.86).opacity(0.24), lineWidth: 1)
@@ -688,7 +688,7 @@ struct IOSKeyLoginView: View {
                         } label: {
                             Label(language.text("login.paste_key"), systemImage: "doc.on.clipboard")
                                 .font(.system(size: 18, weight: .semibold, design: .rounded))
-                                .foregroundStyle(Color(red: 0.53, green: 0.18, blue: 0.86))
+                                .foregroundStyle(Color.white.opacity(0.90))
                         }
                         .buttonStyle(.plain)
 
@@ -698,7 +698,7 @@ struct IOSKeyLoginView: View {
                         } label: {
                             Label(language.text("login.clear_external"), systemImage: "trash")
                                 .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                .foregroundStyle(Color(red: 0.74, green: 0.20, blue: 0.28))
+                                .foregroundStyle(Color.white.opacity(0.86))
                         }
                         .buttonStyle(.plain)
 
