@@ -738,6 +738,12 @@ private struct DeltaSliderRow: View {
     @Binding var value: Double
     let range: ClosedRange<Double>
     let suffix: String
+    init(_ title: String, value: Binding<Double>, range: ClosedRange<Double>, suffix: String) {
+        self.title = title
+        self._value = value
+        self.range = range
+        self.suffix = suffix
+    }
     var body: some View { VStack(spacing: 2) { HStack { Text(title).font(.caption).foregroundStyle(DeltaColors.ink); Spacer(); Text(String(format: suffix == "m" ? "%.0f%@" : suffix == "°" ? "%.0f%@" : "%.1f%@", value, suffix)).font(.caption2.weight(.bold)).foregroundStyle(DeltaColors.purple) }; Slider(value: $value, in: range).tint(DeltaColors.purple) } }
 }
 
