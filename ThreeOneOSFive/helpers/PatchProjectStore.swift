@@ -198,8 +198,12 @@ final class PatchProjectStore: ObservableObject {
             var skippedCount = 0
             for patch in feed.patches {
                 do {
-                    guard patch.updatedAt > PatchProjectLibrary.remoteVersion(for: patch.id),
-                          let category = PatchGameCategory(rawValue: patch.category),
+                    let mappedID = PatchProjectLibrary.remotePackageID(for: patch.id)
+                    let hasCurrentPackage = mappedID.map { id in items.contains(where: { $0.id == id }) } ?? false
+                    if hasCurrentPackage && patch.updatedAt <= PatchProjectLibrary.remoteVersion(for: patch.id) {
+                        continue
+                    }
+                    guard let category = PatchGameCategory(rawValue: patch.category),
                           let feature = PatchFeatureCategory(rawValue: patch.feature),
                           let url = Self.remoteURL(for: patch.fileUrl) else { continue }
                     var packageRequest = URLRequest(url: url)
@@ -214,7 +218,6 @@ final class PatchProjectStore: ObservableObject {
                     guard let packageResponse = packageResponse as? HTTPURLResponse,
                           (200..<300).contains(packageResponse.statusCode),
                           Self.sha256Hex(packageData) == patch.checksumSha256.lowercased() else { continue }
-                    let mappedID = PatchProjectLibrary.remotePackageID(for: patch.id)
                     var summary = try PatchPackageCodec.inspect(packageData)
                     var existingURL = items.first(where: { $0.id == mappedID })?.packageURL
                     if (mappedID == nil || (mappedID != nil && claimedPackageIDs.contains(mappedID!)))
