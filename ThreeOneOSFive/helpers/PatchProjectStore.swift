@@ -647,6 +647,35 @@ final class PatchProjectStore: ObservableObject {
         }
     }
 
+    func restoreInline(_ item: PatchLibraryItem) {
+        guard !isBusy,
+              let receipt = DevicePatchService.latestReceipt(projectID: item.id) else {
+            return
+        }
+        isBusy = true
+        Task.detached(priority: .userInitiated) { [weak self] in
+            do {
+                try DevicePatchService.restore(receipt: receipt, allowChangedTargets: true)
+                await self?.finishInlineRestore(success: true)
+            } catch let error as PatchPackageError {
+                await self?.failOperation(error)
+            } catch {
+                await self?.failOperation(.restoreFailed)
+            }
+        }
+    }
+
+    private func finishInlineRestore(success: Bool) {
+        reload()
+        isBusy = false
+        if success {
+            alert = PatchStoreAlert(
+                titleKey: "common.done",
+                messageKey: "patch.restored_message"
+            )
+        }
+    }
+
     private func finishInlineApply(success: Bool) {
         reload()
         isBusy = false

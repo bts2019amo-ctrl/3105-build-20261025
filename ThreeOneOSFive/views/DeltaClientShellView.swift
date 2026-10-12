@@ -616,11 +616,10 @@ private struct DeltaRemoteFeatureTab: View {
     @EnvironmentObject private var patchStore: PatchProjectStore
     let feature: PatchFeatureCategory
     let selectedGame: DeltaGame
+    @State private var expandedItemID: UUID?
 
     private var items: [PatchLibraryItem] {
-        patchStore.items.filter {
-            PatchProjectLibrary.featureCategory(for: $0) == feature
-        }
+        patchStore.items.filter { PatchProjectLibrary.featureCategory(for: $0) == feature }
     }
 
     private var title: String {
@@ -643,6 +642,10 @@ private struct DeltaRemoteFeatureTab: View {
         }
     }
 
+    private func isApplied(_ item: PatchLibraryItem) -> Bool {
+        DevicePatchService.latestReceipt(projectID: item.id) != nil
+    }
+
     var body: some View {
         VStack(spacing: 12) {
             DeltaCard {
@@ -653,7 +656,7 @@ private struct DeltaRemoteFeatureTab: View {
                         .font(.system(size: 8, weight: .black))
                         .foregroundStyle(DeltaColors.purple)
                 }
-                Text("Os patches remotos aparecem aqui. Toque em APPLY para aplicar ou UNLOCK para liberar um patch protegido.")
+                Text("Toque no patch para expandir. Depois você pode aplicar ou restaurar o original.")
                     .font(.caption)
                     .foregroundStyle(DeltaColors.muted)
                     .fixedSize(horizontal: false, vertical: true)
@@ -679,54 +682,83 @@ private struct DeltaRemoteFeatureTab: View {
                 }
             } else {
                 ForEach(items) { item in
+                    let applied = isApplied(item)
                     DeltaCard {
-                        HStack(spacing: 10) {
-                            if PatchProjectLibrary.featureCategory(for: item) == .skin,
-                               let iconURL = PatchProjectLibrary.remoteIconURL(for: item.id) {
-                                AsyncImage(url: iconURL) { phase in
-                                    if let image = phase.image { image.resizable().scaledToFill() } else { Image(systemName: icon).resizable().scaledToFit().padding(10).foregroundStyle(DeltaColors.purple) }
-                                }
-                                .frame(width: 42, height: 42)
-                                .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
-                            } else {
-                                Image(systemName: icon)
-                                    .font(.title3)
-                                    .foregroundStyle(DeltaColors.purple)
+                        Button {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) {
+                                expandedItemID = expandedItemID == item.id ? nil : item.id
+                            }
+                        } label: {
+                            HStack(spacing: 10) {
+                                if feature == .skin, let iconURL = PatchProjectLibrary.remoteIconURL(for: item.id) {
+                                    AsyncImage(url: iconURL) { phase in
+                                        if let image = phase.image { image.resizable().scaledToFill() }
+                                        else { Image(systemName: icon).resizable().scaledToFit().padding(10).foregroundStyle(DeltaColors.purple) }
+                                    }
                                     .frame(width: 42, height: 42)
-                                    .background(DeltaColors.purple.opacity(0.10), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-                            }
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(item.project?.name ?? item.packageURL.deletingPathExtension().lastPathComponent)
-                                    .font(.subheadline.weight(.bold))
-                                    .foregroundStyle(DeltaColors.ink)
-                                    .lineLimit(1)
-                                Text(item.isLocked ? "Protected remote patch" : "Ready to apply")
-                                    .font(.caption2)
-                                    .foregroundStyle(DeltaColors.muted)
-                            }
-                            Spacer()
-                            let isApplied = DevicePatchService.latestReceipt(projectID: item.id) != nil
-                            Button {
-                                if isApplied {
-                                    patchStore.alert = PatchStoreAlert(titleKey: "common.done", messageKey: "patch.error.already_applied")
-                                } else if item.isLocked {
-                                    patchStore.requestUnlock(for: item)
+                                    .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
                                 } else {
-                                    patchStore.applyInline(item)
+                                    Image(systemName: icon)
+                                        .font(.title3)
+                                        .foregroundStyle(DeltaColors.purple)
+                                        .frame(width: 42, height: 42)
+                                        .background(DeltaColors.purple.opacity(0.10), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
                                 }
-                            } label: {
-                                Label(
-                                    isApplied ? "APPLIED" : item.isLocked ? "UNLOCK" : "APPLY",
-                                    systemImage: isApplied ? "checkmark.circle.fill" : item.isLocked ? "lock.fill" : "play.fill"
-                                )
-                                .font(.system(size: 8, weight: .black))
-                                .foregroundStyle(isApplied ? .green : .white)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 6)
-                                .background(isApplied ? Color.green.opacity(0.12) : DeltaColors.purple, in: Capsule())
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(PatchProjectLibrary.displayName(for: item).isEmpty ? (item.project?.name ?? item.packageURL.deletingPathExtension().lastPathComponent) : PatchProjectLibrary.displayName(for: item))
+                                        .font(.subheadline.weight(.bold))
+                                        .foregroundStyle(DeltaColors.ink)
+                                        .lineLimit(1)
+                                    Text(applied ? "Applied — tap to restore" : item.isLocked ? "Protected — tap to unlock" : "Tap to configure")
+                                        .font(.caption2)
+                                        .foregroundStyle(DeltaColors.muted)
+                                }
+                                Spacer()
+                                Image(systemName: expandedItemID == item.id ? "chevron.up.circle.fill" : "chevron.down.circle")
+                                    .foregroundStyle(DeltaColors.purple)
                             }
-                            .buttonStyle(.plain)
-                            .disabled(patchStore.isBusy && !item.isLocked)
+                        }
+                        .buttonStyle(.plain)
+
+                        if expandedItemID == item.id {
+                            Divider().overlay(DeltaColors.purple.opacity(0.12))
+                            if applied {
+                                Button {
+                                    patchStore.restoreInline(item)
+                                } label: {
+                                    Label("RESTORE ORIGINAL", systemImage: "arrow.uturn.backward.circle.fill")
+                                        .font(.system(size: 9, weight: .black))
+                                        .foregroundStyle(.white)
+                                        .frame(maxWidth: .infinity, minHeight: 38)
+                                        .background(Color.orange, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                }
+                                .buttonStyle(.plain)
+                                .disabled(patchStore.isBusy)
+                            } else if item.isLocked {
+                                Button {
+                                    patchStore.requestUnlock(for: item)
+                                } label: {
+                                    Label("UNLOCK PATCH", systemImage: "lock.open.fill")
+                                        .font(.system(size: 9, weight: .black))
+                                        .foregroundStyle(.white)
+                                        .frame(maxWidth: .infinity, minHeight: 38)
+                                        .background(DeltaColors.purple, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                }
+                                .buttonStyle(.plain)
+                                .disabled(patchStore.isBusy)
+                            } else {
+                                Button {
+                                    patchStore.applyInline(item)
+                                } label: {
+                                    Label("APPLY PATCH", systemImage: "play.fill")
+                                        .font(.system(size: 9, weight: .black))
+                                        .foregroundStyle(.white)
+                                        .frame(maxWidth: .infinity, minHeight: 38)
+                                        .background(DeltaColors.purple, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                }
+                                .buttonStyle(.plain)
+                                .disabled(patchStore.isBusy)
+                            }
                         }
                     }
                 }
