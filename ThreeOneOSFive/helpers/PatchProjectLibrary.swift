@@ -185,7 +185,15 @@ enum PatchProjectLibrary {
 
     static func featureCategory(for item: PatchLibraryItem) -> PatchFeatureCategory {
         let features = UserDefaults.standard.dictionary(forKey: featureDefaultsKey) as? [String: String]
-        return features?[item.id.uuidString].flatMap(PatchFeatureCategory.init(rawValue:)) ?? .cache
+        if let stored = features?[item.id.uuidString].flatMap(PatchFeatureCategory.init(rawValue:)) {
+            return stored
+        }
+        let name = (displayName(for: item).isEmpty ? (item.project?.name ?? item.packageURL.lastPathComponent) : displayName(for: item)).lowercased()
+        if name.contains("skin") { return .skin }
+        if name.contains("avatar") { return .avatar }
+        if name.contains("hologram") || name.contains("holo") { return .hologram }
+        if name.contains("aimbot") || name.contains("esp") || name.contains("external") { return .external }
+        return .cache
     }
 
     static func setFeatureCategory(_ category: PatchFeatureCategory, for packageID: UUID) {

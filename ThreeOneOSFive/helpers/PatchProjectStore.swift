@@ -229,7 +229,7 @@ final class PatchProjectStore: ObservableObject {
                         summary = try PatchPackageCodec.inspect(packageData)
                         existingURL = nil
                     }
-                    guard try Self.persistImportedPackage(
+                    let pendingUnlock = try Self.persistImportedPackage(
                         data: packageData,
                         summary: summary,
                         existingURL: existingURL,
@@ -238,7 +238,16 @@ final class PatchProjectStore: ObservableObject {
                         remoteID: patch.id,
                         remoteVersion: patch.updatedAt,
                         remoteName: patch.name
-                    ) == nil else { continue }
+                    )
+                    if pendingUnlock != nil {
+                        _ = try PatchProjectLibrary.save(
+                            data: packageData,
+                            projectName: patch.name,
+                            existingURL: existingURL
+                        )
+                        PatchProjectLibrary.setCategory(category, for: summary.packageID)
+                        PatchProjectLibrary.setFeatureCategory(feature, for: summary.packageID)
+                    }
                     PatchProjectLibrary.setRemotePackageID(summary.packageID, for: patch.id)
                     PatchProjectLibrary.setRemoteVersion(patch.updatedAt, for: patch.id)
                     PatchProjectLibrary.setDisplayName(patch.name, for: summary.packageID)

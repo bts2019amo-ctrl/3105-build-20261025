@@ -4,6 +4,7 @@ import UIKit
 struct DeltaClientShellView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var keySession: IOSKeySession
+    @EnvironmentObject private var patchStore: PatchProjectStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(AppLanguage.storageKey) private var languageCode = AppLanguage.english.rawValue
 
@@ -64,6 +65,11 @@ struct DeltaClientShellView: View {
             try? await Task.sleep(nanoseconds: reduceMotion ? 350_000_000 : 1_650_000_000)
             guard !Task.isCancelled else { return }
             withAnimation(motion) { route = .selector }
+        }
+        .onChange(of: route) { newRoute in
+            if newRoute == .dashboard {
+                patchStore.syncNow()
+            }
         }
     }
 }
@@ -485,10 +491,7 @@ private struct DeltaHomeTab: View {
     @State private var antiBan = false
 
     private var remoteItems: [PatchLibraryItem] {
-        patchStore.items.filter { item in
-            let category = PatchProjectLibrary.category(for: item)
-            return selectedGame == .freeFire ? category == .normal : category == .max
-        }
+        patchStore.items
     }
 
     private func featureCount(_ feature: PatchFeatureCategory) -> Int {
@@ -617,7 +620,6 @@ private struct DeltaRemoteFeatureTab: View {
     private var items: [PatchLibraryItem] {
         patchStore.items.filter {
             PatchProjectLibrary.featureCategory(for: $0) == feature
-                && PatchProjectLibrary.category(for: $0) == (selectedGame == .freeFire ? .normal : .max)
         }
     }
 
@@ -651,7 +653,7 @@ private struct DeltaRemoteFeatureTab: View {
                         .font(.system(size: 8, weight: .black))
                         .foregroundStyle(DeltaColors.purple)
                 }
-                Text("Selecione um patch remoto para o jogo atual e abra a biblioteca para aplicar com segurança.")
+                Text("Os patches remotos aparecem aqui. Toque em APPLY para aplicar ou UNLOCK para liberar um patch protegido.")
                     .font(.caption)
                     .foregroundStyle(DeltaColors.muted)
                     .fixedSize(horizontal: false, vertical: true)
@@ -667,7 +669,7 @@ private struct DeltaRemoteFeatureTab: View {
                             .font(.subheadline.weight(.semibold))
                             .foregroundStyle(DeltaColors.ink)
                             .multilineTextAlignment(.center)
-                        Text("Use o botão abaixo para abrir a biblioteca completa e atualizar o feed remoto.")
+                        Text("Atualize o feed no Dashboard e permaneça nesta aba para acompanhar os patches recebidos.")
                             .font(.caption)
                             .foregroundStyle(DeltaColors.muted)
                             .multilineTextAlignment(.center)
