@@ -33,7 +33,6 @@ struct ExternalSystemShellView: View {
                 .transition(.opacity.combined(with: .scale(scale: 0.985)))
             case .dashboard:
                 DeltaDashboardView(
-                    selectedGame: selectedGame,
                     selectedTab: $selectedTab,
                     languageCode: $languageCode,
                     selectedGame: $selectedGame,
