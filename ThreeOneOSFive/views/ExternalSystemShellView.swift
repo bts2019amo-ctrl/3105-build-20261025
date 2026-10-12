@@ -124,7 +124,7 @@ private enum DeltaTab: String, CaseIterable { case dashboard, cache, avatar, hol
         case .cache: return "Cache"
         case .avatar: return "Avatar"
         case .hologram: return "Hologram"
-        case .external: return "Aimbot / ESP"
+        case .external: return "External"
         case .skin: return "Skin"
         case .settings: return "Settings"
         }
@@ -135,7 +135,7 @@ private enum DeltaTab: String, CaseIterable { case dashboard, cache, avatar, hol
         case .cache: return "Cache"
         case .avatar: return "Avatar"
         case .hologram: return "Hologram"
-        case .external: return "Aimbot / ESP"
+        case .external: return "External"
         case .skin: return "Skin"
         case .settings: return "Cài đặt"
         }
@@ -422,7 +422,7 @@ private struct DeltaDashboardView: View {
                         case .cache: DeltaRemoteFeatureTab(feature: .cache, selectedGame: selectedGame)
                         case .avatar: DeltaRemoteFeatureTab(feature: .avatar, selectedGame: selectedGame)
                         case .hologram: DeltaRemoteFeatureTab(feature: .hologram, selectedGame: selectedGame)
-                        case .external: DeltaRemoteFeatureTab(feature: .external, selectedGame: selectedGame)
+                        case .external: DeltaExternalPanelTab(selectedGame: selectedGame)
                         case .skin: DeltaRemoteFeatureTab(feature: .skin, selectedGame: selectedGame)
                         case .settings: DeltaReferenceSettingsTab(languageCode: $languageCode, isVietnamese: isVietnamese, appState: appState, keySession: keySession)
                         }
@@ -628,6 +628,31 @@ private struct DeltaHomeTab: View {
         }
         .frame(maxWidth: .infinity, minHeight: 54)
         .background(Color(red: 0.97, green: 0.97, blue: 0.99), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+}
+
+private struct DeltaExternalPanelTab: View {
+    @EnvironmentObject private var patchStore: PatchProjectStore
+    let selectedGame: DeltaGame
+
+    private var selectedCategory: PatchGameCategory {
+        selectedGame == .freeFire ? .normal : .max
+    }
+
+    private var externalPatch: PatchLibraryItem? {
+        patchStore.items.first {
+            PatchProjectLibrary.category(for: $0) == selectedCategory
+                && PatchProjectLibrary.featureCategory(for: $0) == .external
+        }
+    }
+
+    var body: some View {
+        ExternalPanelView(
+            store: patchStore,
+            item: externalPatch,
+            onRequestUnlock: { patchStore.requestUnlock(for: $0) }
+        )
+        .padding(.vertical, 8)
     }
 }
 

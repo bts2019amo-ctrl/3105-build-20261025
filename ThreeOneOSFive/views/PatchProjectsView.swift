@@ -852,7 +852,7 @@ private enum ExternalPanelTab: String, CaseIterable, Identifiable {
     }
 }
 
-private struct ExternalPanelView: View {
+struct ExternalPanelView: View {
     @Environment(\.appLanguage) private var language
     @ObservedObject var store: PatchProjectStore
     let item: PatchLibraryItem?
