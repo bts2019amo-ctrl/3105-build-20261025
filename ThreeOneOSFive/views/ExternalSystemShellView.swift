@@ -14,7 +14,7 @@ struct ExternalSystemShellView: View {
     @State private var showAnnouncement = false
     @State private var showErrorBanner = false
     @AppStorage("externalSystem.streamProofEnabled") private var streamProofEnabled = false
-    @State private var isScreenCaptured = UIScreen.main.isCaptured
+    @State private var isScreenCaptured = UIScreen.screens.contains(where: { $0.isCaptured })
 
     private var isVietnamese: Bool { languageCode == AppLanguage.vietnamese.rawValue }
     private var motion: Animation? { reduceMotion ? nil : .easeInOut(duration: 0.28) }
@@ -91,7 +91,18 @@ struct ExternalSystemShellView: View {
             patchStore.syncNow()
         }
         .onReceive(NotificationCenter.default.publisher(for: UIScreen.capturedDidChangeNotification)) { _ in
-            isScreenCaptured = UIScreen.main.isCaptured
+            isScreenCaptured = UIScreen.screens.contains(where: { $0.isCaptured })
+        }
+        .task(id: streamProofEnabled) {
+            // The notification is not delivered consistently across iOS versions;
+            // polling keeps the shield active during recording and mirroring.
+            while !Task.isCancelled {
+                let captured = UIScreen.screens.contains(where: { $0.isCaptured })
+                if captured != isScreenCaptured {
+                    isScreenCaptured = captured
+                }
+                try? await Task.sleep(nanoseconds: 250_000_000)
+            }
         }
     }
 }
