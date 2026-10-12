@@ -569,35 +569,61 @@ struct IOSKeyLoginView: View {
     @ObservedObject var session: IOSKeySession
     @State private var key = ""
     @State private var isKeyVisible = false
+    @State private var appeared = false
+    @State private var pressed = false
 
     var body: some View {
         ZStack {
-            Color.black
+            LinearGradient(
+                colors: [
+                    Color(red: 0.98, green: 0.97, blue: 1.0),
+                    Color(red: 0.94, green: 0.90, blue: 0.99),
+                    Color(red: 0.99, green: 0.98, blue: 1.0)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
                 .ignoresSafeArea()
+
+            Circle()
+                .fill(AppTheme.accent.opacity(0.12))
+                .frame(width: 240, height: 240)
+                .blur(radius: 3)
+                .offset(x: 150, y: -330)
+            Circle()
+                .fill(Color.purple.opacity(0.08))
+                .frame(width: 210, height: 210)
+                .blur(radius: 2)
+                .offset(x: -160, y: 330)
 
             ScrollView(showsIndicators: false) {
                 VStack(spacing: 0) {
-                    Spacer(minLength: 64)
+                    Spacer(minLength: 48)
 
                     AppLogo(size: 78)
-                        .padding(.bottom, 20)
+                        .padding(.bottom, 16)
+                        .scaleEffect(appeared ? 1 : 0.84)
+                        .opacity(appeared ? 1 : 0)
 
                     Text(language.text("brand.external_system"))
-                        .font(.system(size: 30, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white)
+                        .font(.system(size: 29, weight: .black, design: .rounded))
+                        .tracking(1.1)
+                        .foregroundStyle(AppTheme.accent)
+                        .opacity(appeared ? 1 : 0)
 
                     Text(language.text("login.subtitle"))
-                        .font(.system(size: 17, weight: .regular, design: .rounded))
-                        .foregroundStyle(Color.white.opacity(0.72))
+                        .font(.system(size: 15, weight: .medium, design: .rounded))
+                        .foregroundStyle(Color(red: 0.35, green: 0.34, blue: 0.43))
                         .multilineTextAlignment(.center)
-                        .padding(.top, 16)
+                        .padding(.top, 10)
                         .padding(.horizontal, 20)
+                        .opacity(appeared ? 1 : 0)
 
                     VStack(spacing: 14) {
                         HStack(spacing: 10) {
                             Image(systemName: "key.fill")
                                 .font(.system(size: 19, weight: .semibold))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(AppTheme.accent)
                                 .frame(width: 22)
 
                             Group {
@@ -608,7 +634,8 @@ struct IOSKeyLoginView: View {
                                 }
                             }
                             .font(.system(size: 17, weight: .regular, design: .rounded))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Color(red: 0.12, green: 0.10, blue: 0.23))
+                            .tint(AppTheme.accent)
                             .textInputAutocapitalization(.characters)
                             .autocorrectionDisabled()
 
@@ -617,7 +644,7 @@ struct IOSKeyLoginView: View {
                             } label: {
                                 Image(systemName: isKeyVisible ? "eye.slash.fill" : "eye.fill")
                                     .font(.system(size: 19, weight: .semibold))
-                                    .foregroundStyle(.white.opacity(0.82))
+                                    .foregroundStyle(AppTheme.accent.opacity(0.78))
                                     .frame(width: 28, height: 36)
                             }
                             .buttonStyle(.plain)
@@ -625,19 +652,22 @@ struct IOSKeyLoginView: View {
                         }
                         .padding(.horizontal, 18)
                         .frame(height: 56)
-                        .background(Color(red: 0.20, green: 0.20, blue: 0.22))
+                        .background(Color.white.opacity(0.92))
                         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                         .overlay {
                             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .stroke(Color.white.opacity(0.22), lineWidth: 1)
+                                .stroke(AppTheme.accent.opacity(0.20), lineWidth: 1)
                         }
+                        .shadow(color: AppTheme.accent.opacity(0.10), radius: 12, y: 5)
 
                         Button {
+                            withAnimation(.spring(response: 0.24, dampingFraction: 0.76)) { pressed = true }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { pressed = false }
                             session.submit(key)
                         } label: {
                             Group {
                                 if session.isChecking {
-                                    ProgressView().tint(Color(red: 0.20, green: 0.24, blue: 0.28))
+                                    ProgressView().tint(.white)
                                 } else {
                                     HStack(spacing: 12) {
                                         Text(language.text("login.enter"))
@@ -646,11 +676,16 @@ struct IOSKeyLoginView: View {
                                     .font(.system(size: 18, weight: .bold, design: .rounded))
                                 }
                             }
-                            .foregroundStyle(Color(red: 0.29, green: 0.34, blue: 0.39))
+                            .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 56)
                         }
-                        .background(Color.white.opacity(0.68), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .background(
+                            LinearGradient(colors: [AppTheme.accent, Color(red: 0.34, green: 0.10, blue: 0.64)], startPoint: .leading, endPoint: .trailing),
+                            in: RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        )
+                        .shadow(color: AppTheme.accent.opacity(0.28), radius: 12, y: 6)
+                        .scaleEffect(pressed ? 0.97 : 1)
                         .disabled(session.isChecking)
 
                         Button {
@@ -660,7 +695,7 @@ struct IOSKeyLoginView: View {
                         } label: {
                             Label(language.text("login.paste_key"), systemImage: "doc.on.clipboard")
                                 .font(.system(size: 18, weight: .semibold, design: .rounded))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(AppTheme.accent)
                         }
                         .buttonStyle(.plain)
 
@@ -670,26 +705,33 @@ struct IOSKeyLoginView: View {
                         } label: {
                             Label(language.text("login.clear_external"), systemImage: "trash")
                                 .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(Color(red: 0.74, green: 0.20, blue: 0.28))
                         }
                         .buttonStyle(.plain)
 
                         if let error = session.errorMessage {
                             Label(error, systemImage: "exclamationmark.triangle.fill")
                                 .font(.footnote)
-                                .foregroundStyle(.red)
+                                .foregroundStyle(Color(red: 0.74, green: 0.20, blue: 0.28))
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 16)
                         }
                     }
                     .padding(24)
-                    .background(Color(red: 0.105, green: 0.105, blue: 0.12), in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 26, style: .continuous)
+                            .stroke(Color.white.opacity(0.85), lineWidth: 1)
+                    }
+                    .shadow(color: AppTheme.accent.opacity(0.12), radius: 22, y: 10)
                     .padding(.top, 36)
                     .padding(.horizontal, 28)
+                    .offset(y: appeared ? 0 : 18)
+                    .opacity(appeared ? 1 : 0)
 
                     Label(language.text("login.official_version"), systemImage: "checkmark.shield.fill")
                         .font(.system(size: 15, weight: .regular, design: .rounded))
-                        .foregroundStyle(Color.white.opacity(0.55))
+                        .foregroundStyle(Color(red: 0.35, green: 0.34, blue: 0.43))
                         .padding(.top, 34)
 
                     Spacer(minLength: 48)
@@ -699,5 +741,10 @@ struct IOSKeyLoginView: View {
             .dynamicTypeSize(.large)
         }
         .tint(AppTheme.accent)
+        .onAppear {
+            withAnimation(.spring(response: 0.58, dampingFraction: 0.82)) {
+                appeared = true
+            }
+        }
     }
 }

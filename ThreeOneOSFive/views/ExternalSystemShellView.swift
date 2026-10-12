@@ -15,6 +15,7 @@ struct ExternalSystemShellView: View {
     @State private var showErrorBanner = false
     @AppStorage("externalSystem.streamProofEnabled") private var streamProofEnabled = false
     @State private var isScreenCaptured = UIScreen.screens.contains(where: { $0.isCaptured })
+    @State private var screenshotShieldActive = false
 
     private var isVietnamese: Bool { languageCode == AppLanguage.vietnamese.rawValue }
     private var motion: Animation? { reduceMotion ? nil : .easeInOut(duration: 0.28) }
@@ -57,7 +58,7 @@ struct ExternalSystemShellView: View {
                 .zIndex(10)
             }
 
-            if streamProofEnabled && isScreenCaptured {
+            if streamProofEnabled && (isScreenCaptured || screenshotShieldActive) {
                 Color.black
                     .ignoresSafeArea()
                     .overlay {
@@ -93,6 +94,13 @@ struct ExternalSystemShellView: View {
         .onReceive(NotificationCenter.default.publisher(for: UIScreen.capturedDidChangeNotification)) { _ in
             isScreenCaptured = UIScreen.screens.contains(where: { $0.isCaptured })
         }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.userDidTakeScreenshotNotification)) { _ in
+            guard streamProofEnabled else { return }
+            screenshotShieldActive = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+                screenshotShieldActive = false
+            }
+        }
         .task(id: streamProofEnabled) {
             // The notification is not delivered consistently across iOS versions;
             // polling keeps the shield active during recording and mirroring.
@@ -101,7 +109,7 @@ struct ExternalSystemShellView: View {
                 if captured != isScreenCaptured {
                     isScreenCaptured = captured
                 }
-                try? await Task.sleep(nanoseconds: 250_000_000)
+                try? await Task.sleep(nanoseconds: 50_000_000)
             }
         }
     }
