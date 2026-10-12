@@ -424,7 +424,7 @@ private struct DeltaDashboardView: View {
                         case .cache: DeltaRemoteFeatureTab(feature: .cache, selectedGame: selectedGame)
                         case .avatar: DeltaRemoteFeatureTab(feature: .avatar, selectedGame: selectedGame)
                         case .hologram: DeltaRemoteFeatureTab(feature: .hologram, selectedGame: selectedGame)
-                        case .external: DeltaExternalPanelTab(selectedGame: selectedGame)
+                        case .external: DeltaRemoteFeatureTab(feature: .external, selectedGame: selectedGame)
                         case .skin: DeltaRemoteFeatureTab(feature: .skin, selectedGame: selectedGame)
                         case .settings: DeltaReferenceSettingsTab(languageCode: $languageCode, isVietnamese: isVietnamese, appState: appState, keySession: keySession)
                         }
@@ -792,8 +792,15 @@ private struct DeltaRemoteFeatureTab: View {
     private var items: [PatchLibraryItem] {
         let category: PatchGameCategory = selectedGame == .freeFire ? .normal : .max
         return patchStore.items.filter {
-            PatchProjectLibrary.featureCategory(for: $0) == feature
-                && PatchProjectLibrary.category(for: $0) == category
+            guard PatchProjectLibrary.category(for: $0) == category else { return false }
+            if feature == .external {
+                let displayName = PatchProjectLibrary.displayName(for: $0)
+                let fileName = $0.packageURL.deletingPathExtension().lastPathComponent
+                return PatchProjectLibrary.featureCategory(for: $0) == .external
+                    || displayName.localizedCaseInsensitiveContains("external")
+                    || fileName.localizedCaseInsensitiveContains("external")
+            }
+            return PatchProjectLibrary.featureCategory(for: $0) == feature
         }
     }
 
@@ -802,7 +809,7 @@ private struct DeltaRemoteFeatureTab: View {
         case .cache: return "CACHE PATCHES"
         case .avatar: return "AVATAR PATCHES"
         case .hologram: return "HOLOGRAM PATCHES"
-        case .external: return "AIMBOT / ESP PATCHES"
+        case .external: return "EXTERNAL PATCHES"
         case .skin: return "SKIN PATCHES"
         }
     }
@@ -896,7 +903,7 @@ private struct DeltaRemoteFeatureTab: View {
                                         .font(.subheadline.weight(.bold))
                                         .foregroundStyle(DeltaColors.ink)
                                         .lineLimit(1)
-                                    Text(applied ? "Applied — tap to restore" : item.isLocked ? "Protected — tap to unlock" : "Tap to configure")
+                                    Text(applied ? (feature == .external ? "Running — tap to clear data" : "Applied — tap to restore") : item.isLocked ? "Protected — tap to unlock" : "Tap to configure")
                                         .font(.caption2)
                                         .foregroundStyle(DeltaColors.muted)
                                 }
@@ -913,7 +920,7 @@ private struct DeltaRemoteFeatureTab: View {
                                 Button {
                                     patchStore.restoreInline(item)
                                 } label: {
-                                    Label("RESTORE ORIGINAL", systemImage: "arrow.uturn.backward.circle.fill")
+                                    Label(feature == .external ? "CLEAR DATA" : "RESTORE ORIGINAL", systemImage: "arrow.uturn.backward.circle.fill")
                                         .font(.system(size: 9, weight: .black))
                                         .foregroundStyle(.white)
                                         .frame(maxWidth: .infinity, minHeight: 38)
@@ -937,7 +944,7 @@ private struct DeltaRemoteFeatureTab: View {
                                 Button {
                                     patchStore.applyInline(item)
                                 } label: {
-                                    Label("APPLY PATCH", systemImage: "play.fill")
+                                    Label(feature == .external ? "START" : "APPLY PATCH", systemImage: "play.fill")
                                         .font(.system(size: 9, weight: .black))
                                         .foregroundStyle(.white)
                                         .frame(maxWidth: .infinity, minHeight: 38)
