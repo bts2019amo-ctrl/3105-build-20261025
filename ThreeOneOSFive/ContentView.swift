@@ -44,7 +44,7 @@ struct ContentView: View {
     }
 
     var body: some View {
-        DeltaClientShellView()
+        ExternalSystemShellView()
         .id(accentPalette)
         .tint(AppTheme.accent)
         .imageScale(.small)

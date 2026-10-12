@@ -1,7 +1,7 @@
 import SwiftUI
 import UIKit
 
-struct DeltaClientShellView: View {
+struct ExternalSystemShellView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var keySession: IOSKeySession
     @EnvironmentObject private var patchStore: PatchProjectStore
@@ -142,7 +142,7 @@ private struct DeltaSplashView: View {
                     .scaleEffect(pulse ? 1.05 : 0.95)
                     .shadow(color: DeltaColors.purple.opacity(0.35), radius: pulse ? 24 : 10)
 
-                Text("DELTA CLIENT")
+                Text("EXTERNAL SYSTEM")
                     .font(.system(size: 22, weight: .black, design: .rounded))
                     .tracking(1.3)
                     .foregroundStyle(DeltaColors.ink)
@@ -188,7 +188,7 @@ private struct DeltaGameSelectorView: View {
                     VStack(spacing: 16) {
                         AppLogo(size: 68)
                             .padding(.top, 17)
-                        Text("DELTA CLIENT")
+                        Text("EXTERNAL SYSTEM")
                             .font(.system(size: 21, weight: .black, design: .rounded))
                             .tracking(1.2)
                             .foregroundStyle(DeltaColors.ink)
@@ -418,7 +418,7 @@ private struct DeltaHeader: View {
     var body: some View {
         HStack(spacing: 8) {
             AppLogo(size: 29)
-            Text("DELTA CLIENT")
+            Text("EXTERNAL SYSTEM")
                 .font(.system(size: 15, weight: .black, design: .rounded))
                 .tracking(0.7)
                 .foregroundStyle(DeltaColors.ink)
@@ -619,7 +619,11 @@ private struct DeltaRemoteFeatureTab: View {
     @State private var expandedItemID: UUID?
 
     private var items: [PatchLibraryItem] {
-        patchStore.items.filter { PatchProjectLibrary.featureCategory(for: $0) == feature }
+        let category: PatchGameCategory = selectedGame == .freeFire ? .normal : .max
+        return patchStore.items.filter {
+            PatchProjectLibrary.featureCategory(for: $0) == feature
+                && PatchProjectLibrary.category(for: $0) == category
+        }
     }
 
     private var title: String {

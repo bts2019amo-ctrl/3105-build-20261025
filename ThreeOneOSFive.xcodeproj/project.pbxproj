@@ -9,7 +9,7 @@
 /* Begin PBXBuildFile section */
 		3105A200 /* App.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3105A020; };
 		3105A201 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3105A021; };
-		3105M200 /* DeltaClientShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3105M100; };
+		3105M200 /* ExternalSystemShellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3105M100; };
 		3105A203 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3105A023; };
 		3105A204 /* LogView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3105A024; };
 		3105A205 /* Utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3105A025; };
@@ -82,7 +82,7 @@
 		3105A010 /* 3105.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "3105.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		3105A020 /* App.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = App.swift; sourceTree = "<group>"; };
 		3105A021 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		3105M100 /* DeltaClientShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeltaClientShellView.swift; sourceTree = "<group>"; };
+		3105M100 /* ExternalSystemShellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExternalSystemShellView.swift; sourceTree = "<group>"; };
 		3105A023 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		3105A024 /* LogView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogView.swift; sourceTree = "<group>"; };
 		3105A025 /* Utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Utils.swift; sourceTree = "<group>"; };
@@ -228,7 +228,7 @@
 		3105A404 /* views */ = {
 			isa = PBXGroup;
 			children = (
-				3105M100 /* DeltaClientShellView.swift */,
+				3105M100 /* ExternalSystemShellView.swift */,
 				3105A098 /* DesignSystem.swift */,
 				3105A023 /* SettingsView.swift */,
 				3105A024 /* LogView.swift */,
