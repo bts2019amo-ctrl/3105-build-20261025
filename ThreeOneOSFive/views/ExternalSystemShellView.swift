@@ -424,7 +424,7 @@ private struct DeltaDashboardView: View {
                         case .cache: DeltaRemoteFeatureTab(feature: .cache, selectedGame: selectedGame)
                         case .avatar: DeltaRemoteFeatureTab(feature: .avatar, selectedGame: selectedGame)
                         case .hologram: DeltaRemoteFeatureTab(feature: .hologram, selectedGame: selectedGame)
-                        case .external: DeltaRemoteFeatureTab(feature: .external, selectedGame: selectedGame)
+                        case .external: DeltaExternalPanelTab(selectedGame: selectedGame)
                         case .skin: DeltaRemoteFeatureTab(feature: .skin, selectedGame: selectedGame)
                         case .settings: DeltaReferenceSettingsTab(languageCode: $languageCode, isVietnamese: isVietnamese, appState: appState, keySession: keySession)
                         }
@@ -767,9 +767,14 @@ private struct DeltaExternalPanelTab: View {
     }
 
     private var externalPatch: PatchLibraryItem? {
-        patchStore.items.first {
-            PatchProjectLibrary.category(for: $0) == selectedCategory
-                && PatchProjectLibrary.featureCategory(for: $0) == .external
+        patchStore.items.first { item in
+            guard PatchProjectLibrary.category(for: item) == selectedCategory else { return false }
+            let displayName = PatchProjectLibrary.displayName(for: item).trimmingCharacters(in: .whitespacesAndNewlines)
+            let projectName = (item.project?.name ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            let fileName = item.packageURL.deletingPathExtension().lastPathComponent.trimmingCharacters(in: .whitespacesAndNewlines)
+            return displayName.caseInsensitiveCompare("External") == .orderedSame
+                || projectName.caseInsensitiveCompare("External") == .orderedSame
+                || fileName.caseInsensitiveCompare("External") == .orderedSame
         }
     }
 
