@@ -200,12 +200,16 @@ final class PatchProjectStore: ObservableObject {
                 do {
                     let mappedID = PatchProjectLibrary.remotePackageID(for: patch.id)
                     let hasCurrentPackage = mappedID.map { id in items.contains(where: { $0.id == id }) } ?? false
-                    if hasCurrentPackage && patch.updatedAt <= PatchProjectLibrary.remoteVersion(for: patch.id) {
-                        continue
-                    }
                     guard let category = PatchGameCategory(rawValue: patch.category),
                           let feature = PatchFeatureCategory(rawValue: patch.feature),
                           let url = Self.remoteURL(for: patch.fileUrl) else { continue }
+                    if hasCurrentPackage && patch.updatedAt <= PatchProjectLibrary.remoteVersion(for: patch.id) {
+                        if let mappedID {
+                            PatchProjectLibrary.setCategory(category, for: mappedID)
+                            PatchProjectLibrary.setFeatureCategory(feature, for: mappedID)
+                        }
+                        continue
+                    }
                     var packageRequest = URLRequest(url: url)
                     packageRequest.timeoutInterval = 30
                     packageRequest.cachePolicy = .reloadIgnoringLocalCacheData

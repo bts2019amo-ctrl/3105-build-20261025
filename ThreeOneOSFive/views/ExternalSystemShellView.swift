@@ -13,7 +13,6 @@ struct ExternalSystemShellView: View {
     @State private var selectedTab: DeltaTab = .dashboard
     @State private var showAnnouncement = false
     @State private var showErrorBanner = false
-    @State private var isMaxMode = false
 
     private var isVietnamese: Bool { languageCode == AppLanguage.vietnamese.rawValue }
     private var motion: Animation? { reduceMotion ? nil : .easeInOut(duration: 0.28) }
@@ -37,7 +36,7 @@ struct ExternalSystemShellView: View {
                     selectedGame: selectedGame,
                     selectedTab: $selectedTab,
                     languageCode: $languageCode,
-                    isMaxMode: $isMaxMode,
+                    selectedGame: $selectedGame,
                     showErrorBanner: $showErrorBanner,
                     isVietnamese: isVietnamese,
                     appState: appState,
@@ -70,6 +69,9 @@ struct ExternalSystemShellView: View {
             if newRoute == .dashboard {
                 patchStore.syncNow()
             }
+        }
+        .onChange(of: selectedGame) { _ in
+            patchStore.syncNow()
         }
     }
 }
@@ -180,7 +182,7 @@ private struct DeltaGameSelectorView: View {
         ZStack {
             DeltaColors.page.ignoresSafeArea()
             VStack(spacing: 0) {
-                DeltaHeader(isMaxMode: .constant(false), showEye: false)
+                DeltaHeader(selectedGame: .constant(.freeFire), showEye: false)
                     .padding(.top, 7)
                     .padding(.horizontal, 18)
 
@@ -358,10 +360,9 @@ private struct DeltaAnnouncementView: View {
 }
 
 private struct DeltaDashboardView: View {
-    let selectedGame: DeltaGame
+    @Binding var selectedGame: DeltaGame
     @Binding var selectedTab: DeltaTab
     @Binding var languageCode: String
-    @Binding var isMaxMode: Bool
     @Binding var showErrorBanner: Bool
     let isVietnamese: Bool
     let appState: AppState
@@ -371,7 +372,7 @@ private struct DeltaDashboardView: View {
         ZStack(alignment: .top) {
             DeltaColors.page.ignoresSafeArea()
             VStack(spacing: 0) {
-                DeltaHeader(isMaxMode: $isMaxMode, showEye: true)
+                DeltaHeader(selectedGame: $selectedGame, showEye: true)
                     .padding(.horizontal, 16)
                     .padding(.top, 7)
 
@@ -412,7 +413,7 @@ private struct DeltaDashboardView: View {
 }
 
 private struct DeltaHeader: View {
-    @Binding var isMaxMode: Bool
+    @Binding var selectedGame: DeltaGame
     let showEye: Bool
 
     var body: some View {
@@ -424,16 +425,16 @@ private struct DeltaHeader: View {
                 .foregroundStyle(DeltaColors.ink)
             Spacer()
             HStack(spacing: 0) {
-                Button("FF") { withAnimation(.easeInOut(duration: 0.18)) { isMaxMode = false } }
+                Button("FF") { withAnimation(.easeInOut(duration: 0.18)) { selectedGame = .freeFire } }
                     .font(.caption2.weight(.bold))
-                    .foregroundStyle(!isMaxMode ? .white : DeltaColors.muted)
+                    .foregroundStyle(selectedGame == .freeFire ? .white : DeltaColors.muted)
                     .frame(width: 31, height: 25)
-                    .background(!isMaxMode ? DeltaColors.purple : .clear, in: Capsule())
-                Button("MAX") { withAnimation(.easeInOut(duration: 0.18)) { isMaxMode = true } }
+                    .background(selectedGame == .freeFire ? DeltaColors.purple : .clear, in: Capsule())
+                Button("MAX") { withAnimation(.easeInOut(duration: 0.18)) { selectedGame = .freeFireMax } }
                     .font(.caption2.weight(.bold))
-                    .foregroundStyle(isMaxMode ? .white : DeltaColors.muted)
+                    .foregroundStyle(selectedGame == .freeFireMax ? .white : DeltaColors.muted)
                     .frame(width: 38, height: 25)
-                    .background(isMaxMode ? DeltaColors.purple : .clear, in: Capsule())
+                    .background(selectedGame == .freeFireMax ? DeltaColors.purple : .clear, in: Capsule())
             }
             .padding(2)
             .background(Color.white, in: Capsule())
