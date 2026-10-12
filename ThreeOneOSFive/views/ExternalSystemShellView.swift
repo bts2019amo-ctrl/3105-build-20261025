@@ -411,14 +411,16 @@ private struct DeltaDashboardView: View {
         ZStack(alignment: .top) {
             DeltaColors.page.ignoresSafeArea()
             VStack(spacing: 0) {
-                DeltaHeader(selectedGame: $selectedGame, showEye: true)
+                DeltaHeader(selectedGame: $selectedGame, showEye: true, showBack: selectedTab != .dashboard) {
+                    withAnimation(.easeInOut(duration: 0.22)) { selectedTab = .dashboard }
+                }
                     .padding(.horizontal, 16)
                     .padding(.top, 7)
 
                 ScrollView(showsIndicators: false) {
                     Group {
                         switch selectedTab {
-                        case .dashboard: DeltaHomeTab(selectedGame: selectedGame)
+                        case .dashboard: DeltaTabBar(selectedTab: $selectedTab, selectedGame: selectedGame, isVietnamese: isVietnamese)
                         case .cache: DeltaRemoteFeatureTab(feature: .cache, selectedGame: selectedGame)
                         case .avatar: DeltaRemoteFeatureTab(feature: .avatar, selectedGame: selectedGame)
                         case .hologram: DeltaRemoteFeatureTab(feature: .hologram, selectedGame: selectedGame)
@@ -443,9 +445,6 @@ private struct DeltaDashboardView: View {
                 .zIndex(3)
             }
         }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            DeltaTabBar(selectedTab: $selectedTab, selectedGame: selectedGame, isVietnamese: isVietnamese)
-        }
         .animation(.easeInOut(duration: 0.22), value: selectedTab)
         .animation(.easeInOut(duration: 0.22), value: showErrorBanner)
     }
@@ -454,9 +453,21 @@ private struct DeltaDashboardView: View {
 private struct DeltaHeader: View {
     @Binding var selectedGame: DeltaGame
     let showEye: Bool
+    let showBack: Bool
+    let onBack: () -> Void
 
     var body: some View {
         HStack(spacing: 8) {
+            if showBack {
+                Button(action: onBack) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(DeltaColors.purple)
+                        .frame(width: 30, height: 30)
+                        .background(DeltaColors.purple.opacity(0.11), in: Circle())
+                }
+                .buttonStyle(.plain)
+            }
             AppLogo(size: 29)
             Text("EXTERNAL SYSTEM")
                 .font(.system(size: 15, weight: .black, design: .rounded))
@@ -517,7 +528,20 @@ private struct DeltaTabBar: View {
     }
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("ESCOLHA UMA CATEGORIA")
+                    .font(.system(size: 11, weight: .black))
+                    .tracking(1.1)
+                    .foregroundStyle(DeltaColors.purple)
+                Text(selectedGame == .freeFire ? "Patches disponíveis para FF" : "Patches disponíveis para FF MAX")
+                    .font(.system(size: 22, weight: .black, design: .rounded))
+                    .foregroundStyle(DeltaColors.ink)
+                Text("Toque em uma opção para abrir os patches.")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(DeltaColors.muted)
+            }
+
             HStack(spacing: 8) {
                 DeltaCompactTabButton(tab: .dashboard, selectedTab: selectedTab, title: isVietnamese ? DeltaTab.dashboard.vietnameseTitle : DeltaTab.dashboard.title) {
                     select(.dashboard)
@@ -550,9 +574,7 @@ private struct DeltaTabBar: View {
         }
         .padding(.horizontal, 14)
         .padding(.top, 10)
-        .padding(.bottom, 12)
-        .background(.regularMaterial)
-        .overlay(alignment: .top) { Divider().opacity(0.20) }
+        .padding(.bottom, 18)
     }
 }
 
