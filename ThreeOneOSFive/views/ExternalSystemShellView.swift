@@ -197,13 +197,14 @@ struct DeltaPalette {
     let ink: Color
     let muted: Color
     let card: Color
+    let line: Color
 
     static func make(_ theme: DeltaTheme, darkMode: Bool) -> DeltaPalette {
         let primary = theme.swatch
         if darkMode || theme == .dark {
-            return DeltaPalette(primary: primary, dark: primary.opacity(0.72), page: Color(red: 0.09, green: 0.10, blue: 0.14), ink: .white, muted: Color.white.opacity(0.62), card: Color(red: 0.14, green: 0.15, blue: 0.20).opacity(0.98))
+            return DeltaPalette(primary: primary, dark: primary.opacity(0.72), page: Color(red: 0.015, green: 0.015, blue: 0.018), ink: Color(red: 0.94, green: 0.94, blue: 0.95), muted: Color.white.opacity(0.58), card: Color(red: 0.035, green: 0.035, blue: 0.042).opacity(0.99), line: Color.black.opacity(0.88))
         }
-        return DeltaPalette(primary: primary, dark: primary.opacity(0.72), page: Color.white.opacity(0.94), ink: Color(red: 0.10, green: 0.08, blue: 0.20), muted: Color(red: 0.40, green: 0.42, blue: 0.50), card: Color.white.opacity(0.96))
+        return DeltaPalette(primary: primary, dark: primary.opacity(0.72), page: Color.white.opacity(0.94), ink: Color(red: 0.10, green: 0.08, blue: 0.20), muted: Color(red: 0.40, green: 0.42, blue: 0.50), card: Color.white.opacity(0.96), line: Color.white.opacity(0.90))
     }
 }
 
@@ -221,6 +222,7 @@ enum DeltaColors {
     static var ink: Color { palette.ink }
     static var muted: Color { palette.muted }
     static var card: Color { palette.card }
+    static var line: Color { palette.line }
 }
 
 private struct DeltaSplashView: View {
@@ -448,7 +450,7 @@ private struct DeltaAnnouncementView: View {
                 }
                 .padding(16)
             }
-            .background(Color.white, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .background(DeltaColors.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
             .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
             .shadow(color: .black.opacity(0.24), radius: 28, y: 14)
             .padding(.horizontal, 22)
@@ -547,7 +549,7 @@ private struct DeltaHeader: View {
                     .background(selectedGame == .freeFireMax ? DeltaColors.purple : .clear, in: Capsule())
             }
             .padding(2)
-            .background(Color.white, in: Capsule())
+            .background(DeltaColors.card, in: Capsule())
             .shadow(color: DeltaColors.purple.opacity(0.10), radius: 8, y: 3)
             if showEye {
                 Image(systemName: "eye.fill")
@@ -1241,7 +1243,7 @@ private struct DeltaCard<Content: View>: View {
         VStack(alignment: .leading, spacing: 9) { content }
             .padding(12)
             .background(DeltaColors.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.white.opacity(0.9), lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(DeltaColors.line, lineWidth: 1))
             .shadow(color: DeltaColors.purple.opacity(0.06), radius: 8, y: 4)
     }
 }
