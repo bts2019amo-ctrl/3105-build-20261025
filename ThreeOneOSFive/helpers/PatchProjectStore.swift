@@ -93,6 +93,7 @@ final class PatchProjectStore: ObservableObject {
 
     private var pendingUnlock: PendingUnlock?
     private var remoteSyncTask: Task<Void, Never>?
+    private var remoteSyncInFlight = false
     private var isActivated = false
 
     init(autoLoad: Bool = true) {
@@ -162,7 +163,9 @@ final class PatchProjectStore: ObservableObject {
     }
 
     private func synchronizeRemoteFeed() async {
-        guard !isBusy else { return }
+        guard isActivated, !remoteSyncInFlight else { return }
+        remoteSyncInFlight = true
+        defer { remoteSyncInFlight = false }
         remoteSyncState = .syncing
         do {
             var components = URLComponents(
@@ -215,12 +218,12 @@ final class PatchProjectStore: ObservableObject {
                 do {
                     let mappedID = PatchProjectLibrary.remotePackageID(for: patch.id)
                     let hasCurrentPackage = mappedID.map { id in items.contains(where: { $0.id == id }) } ?? false
-                    let category = PatchGameCategory(rawValue: patch.category)
+                    let category = PatchGameCategory(rawValue: patch.category.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
                         ?? Self.inferredGameCategory(name: patch.name, fileName: patch.fileName)
                     let normalizedPatchName = patch.name.trimmingCharacters(in: .whitespacesAndNewlines)
                     let feature = normalizedPatchName.caseInsensitiveCompare("External") == .orderedSame
                         ? .external
-                        : (PatchFeatureCategory(rawValue: patch.feature)
+                        : (PatchFeatureCategory(rawValue: patch.feature.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
                             ?? Self.inferredFeatureCategory(name: patch.name, fileName: patch.fileName))
                     guard let url = Self.remoteURL(for: patch.fileUrl) else { continue }
                     if hasCurrentPackage && patch.updatedAt <= PatchProjectLibrary.remoteVersion(for: patch.id) {
@@ -320,11 +323,9 @@ final class PatchProjectStore: ObservableObject {
                     continue
                 }
             }
-            await Task.detached(priority: .utility) {
-                PatchProjectLibrary.removeRemotePackagesNotInFeed(
-                    remoteIDs: Set(feed.patches.map(\.id))
-                )
-            }.value
+            // Never delete an already downloaded remote package merely because a
+            // transient or partial feed response omitted it. A later complete
+            // feed can update it without making the UI lose patches.
             items = await Task.detached(priority: .utility) {
                 PatchProjectLibrary.load()
             }.value
