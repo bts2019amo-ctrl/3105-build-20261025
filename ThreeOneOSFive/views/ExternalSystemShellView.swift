@@ -396,7 +396,7 @@ private struct DeltaGameRow: View {
             }
             .padding(.horizontal, 12)
             .frame(height: 58)
-            .background(selected ? DeltaColors.purple.opacity(0.09) : Color.white.opacity(0.65), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .background(selected ? DeltaColors.purple.opacity(0.16) : DeltaColors.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(selected ? DeltaColors.purple : Color.clear, lineWidth: 1.2))
         }
         .buttonStyle(.plain)
@@ -660,7 +660,7 @@ private struct DeltaCompactTabButton: View {
             .foregroundStyle(selectedTab == tab ? DeltaColors.purple : DeltaColors.muted)
             .padding(.horizontal, 12)
             .frame(height: 34)
-            .background(selectedTab == tab ? DeltaColors.purple.opacity(0.12) : Color.white.opacity(0.72), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+            .background(selectedTab == tab ? DeltaColors.purple.opacity(0.16) : DeltaColors.card, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
         }
         .buttonStyle(.plain)
     }
@@ -700,12 +700,12 @@ private struct DeltaCategoryCard: View {
             .background(
                 isSelected
                     ? AnyShapeStyle(LinearGradient(colors: [DeltaColors.purpleDark, DeltaColors.purple], startPoint: .topLeading, endPoint: .bottomTrailing))
-                    : AnyShapeStyle(Color.white.opacity(0.80)),
+                    : AnyShapeStyle(DeltaColors.card),
                 in: RoundedRectangle(cornerRadius: 15, style: .continuous)
             )
             .overlay {
                 RoundedRectangle(cornerRadius: 15, style: .continuous)
-                    .stroke(isSelected ? Color.white.opacity(0.18) : DeltaColors.purple.opacity(0.08), lineWidth: 1)
+                    .stroke(isSelected ? DeltaColors.purple.opacity(0.48) : DeltaColors.purple.opacity(0.08), lineWidth: 1)
             }
             .shadow(color: isSelected ? DeltaColors.purple.opacity(0.18) : .black.opacity(0.04), radius: 8, y: 3)
         }
@@ -1224,7 +1224,7 @@ private struct DeltaReferenceSettingsTab: View {
                     DeltaLanguageButton(title: "English", active: languageCode == AppLanguage.english.rawValue) { languageCode = AppLanguage.english.rawValue }
                     DeltaLanguageButton(title: "Tiếng Việt", active: languageCode == AppLanguage.vietnamese.rawValue) { languageCode = AppLanguage.vietnamese.rawValue }
                 }
-                .padding(3).background(Color.gray.opacity(0.18), in: Capsule())
+                .padding(3).background(DeltaColors.line.opacity(0.18), in: Capsule())
             }
             DeltaCard {
                 DeltaSectionTitle(isVietnamese ? "HỖ TRỢ HỆ THỐNG" : "SUPPORT & SYSTEM", icon: "questionmark.circle.fill")
@@ -1300,7 +1300,7 @@ private struct DeltaSegmented: View {
     let title: String
     let items: [String]
     @Binding var selection: Int
-    var body: some View { HStack(spacing: 8) { Text(title).font(.caption2).foregroundStyle(DeltaColors.muted); HStack(spacing: 0) { ForEach(items.indices, id: \.self) { index in Button(items[index]) { withAnimation(.easeInOut(duration: 0.18)) { selection = index } }.font(.system(size: 9, weight: .medium)).foregroundStyle(selection == index ? DeltaColors.ink : DeltaColors.muted).frame(maxWidth: .infinity, minHeight: 24).background(selection == index ? Color.white : .clear, in: Capsule()) } }.padding(2).background(Color.gray.opacity(0.18), in: Capsule()) } }
+    var body: some View { HStack(spacing: 8) { Text(title).font(.caption2).foregroundStyle(DeltaColors.muted); HStack(spacing: 0) { ForEach(items.indices, id: \.self) { index in Button(items[index]) { withAnimation(.easeInOut(duration: 0.18)) { selection = index } }.font(.system(size: 9, weight: .medium)).foregroundStyle(selection == index ? DeltaColors.ink : DeltaColors.muted).frame(maxWidth: .infinity, minHeight: 24).background(selection == index ? DeltaColors.card : .clear, in: Capsule()) } }.padding(2).background(DeltaColors.line.opacity(0.18), in: Capsule()) } }
 }
 
 private struct DeltaInfoRow: View {
@@ -1314,7 +1314,7 @@ private struct DeltaLanguageButton: View {
     let title: String
     let active: Bool
     let action: () -> Void
-    var body: some View { Button(action: action) { Text(title).font(.caption2.weight(active ? .bold : .medium)).foregroundStyle(active ? DeltaColors.ink : DeltaColors.muted).frame(maxWidth: .infinity, minHeight: 25).background(active ? Color.white : .clear, in: Capsule()) }.buttonStyle(.plain) }
+    var body: some View { Button(action: action) { Text(title).font(.caption2.weight(active ? .bold : .medium)).foregroundStyle(active ? DeltaColors.ink : DeltaColors.muted).frame(maxWidth: .infinity, minHeight: 25).background(active ? DeltaColors.card : .clear, in: Capsule()) }.buttonStyle(.plain) }
 }
 
 private struct DeltaActionRow: View {
