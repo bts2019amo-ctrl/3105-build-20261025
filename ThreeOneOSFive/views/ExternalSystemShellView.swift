@@ -155,7 +155,7 @@ private enum DeltaTab: String, CaseIterable { case dashboard, cache, avatar, hol
     }
 }
 
-private enum DeltaTheme: String, CaseIterable, Identifiable {
+enum DeltaTheme: String, CaseIterable, Identifiable {
     case lavender, blue, emerald, red, orange, pink, cyan, gold, graphite, dark
     var id: String { rawValue }
     var title: String {
@@ -188,7 +188,7 @@ private enum DeltaTheme: String, CaseIterable, Identifiable {
     }
 }
 
-private struct DeltaPalette {
+struct DeltaPalette {
     let primary: Color
     let dark: Color
     let page: Color
@@ -207,7 +207,7 @@ private struct DeltaPalette {
     }
 }
 
-private enum DeltaColors {
+enum DeltaColors {
     static let themeKey = "externalSystem.theme"
     private static var palette: DeltaPalette {
         DeltaPalette.make(DeltaTheme(rawValue: UserDefaults.standard.string(forKey: themeKey) ?? "") ?? .lavender)

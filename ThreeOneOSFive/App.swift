@@ -571,19 +571,20 @@ struct IOSKeyLoginView: View {
     @State private var isKeyVisible = false
     @State private var appeared = false
     @State private var pressed = false
+    @AppStorage(DeltaColors.themeKey) private var themeRaw = DeltaTheme.lavender.rawValue
 
     var body: some View {
         ZStack {
-            Color(red: 0.965, green: 0.962, blue: 0.985)
+            DeltaColors.page
                 .ignoresSafeArea()
 
             Circle()
-                .fill(Color(red: 0.53, green: 0.18, blue: 0.86).opacity(0.025))
+                .fill(DeltaColors.purple.opacity(0.025))
                 .frame(width: 240, height: 240)
                 .blur(radius: 3)
                 .offset(x: 150, y: -330)
             Circle()
-                .fill(Color(red: 0.53, green: 0.18, blue: 0.86).opacity(0.018))
+                .fill(DeltaColors.purple.opacity(0.018))
                 .frame(width: 210, height: 210)
                 .blur(radius: 2)
                 .offset(x: -160, y: 330)
@@ -600,12 +601,12 @@ struct IOSKeyLoginView: View {
                     Text(language.text("brand.external_system"))
                         .font(.system(size: 29, weight: .black, design: .rounded))
                         .tracking(1.1)
-                        .foregroundStyle(Color(red: 0.10, green: 0.08, blue: 0.29))
+                        .foregroundStyle(DeltaColors.ink)
                         .opacity(appeared ? 1 : 0)
 
                     Text(language.text("login.subtitle"))
                         .font(.system(size: 15, weight: .medium, design: .rounded))
-                        .foregroundStyle(Color(red: 0.46, green: 0.48, blue: 0.56))
+                        .foregroundStyle(DeltaColors.muted)
                         .multilineTextAlignment(.center)
                         .padding(.top, 10)
                         .padding(.horizontal, 20)
@@ -615,7 +616,7 @@ struct IOSKeyLoginView: View {
                         HStack(spacing: 10) {
                             Image(systemName: "key.fill")
                                 .font(.system(size: 19, weight: .semibold))
-                                .foregroundStyle(Color(red: 0.53, green: 0.18, blue: 0.86))
+                                .foregroundStyle(DeltaColors.purple)
                                 .frame(width: 22)
 
                             Group {
@@ -627,7 +628,7 @@ struct IOSKeyLoginView: View {
                             }
                             .font(.system(size: 17, weight: .regular, design: .rounded))
                             .foregroundStyle(Color.white.opacity(0.92))
-                            .tint(Color(red: 0.53, green: 0.18, blue: 0.86))
+                            .tint(DeltaColors.purple)
                             .textInputAutocapitalization(.characters)
                             .autocorrectionDisabled()
 
@@ -644,13 +645,13 @@ struct IOSKeyLoginView: View {
                         }
                         .padding(.horizontal, 18)
                         .frame(height: 56)
-                        .background(Color(red: 0.53, green: 0.18, blue: 0.86).opacity(0.22))
+                        .background(DeltaColors.purple.opacity(0.22))
                         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                         .overlay {
                             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .stroke(Color(red: 0.53, green: 0.18, blue: 0.86).opacity(0.20), lineWidth: 1)
+                                .stroke(DeltaColors.purple.opacity(0.20), lineWidth: 1)
                         }
-                        .shadow(color: Color(red: 0.53, green: 0.18, blue: 0.86).opacity(0.10), radius: 12, y: 5)
+                        .shadow(color: DeltaColors.purple.opacity(0.10), radius: 12, y: 5)
 
                         Button {
                             withAnimation(.spring(response: 0.24, dampingFraction: 0.76)) { pressed = true }
@@ -659,7 +660,7 @@ struct IOSKeyLoginView: View {
                         } label: {
                             Group {
                                 if session.isChecking {
-                                    ProgressView().tint(Color(red: 0.53, green: 0.18, blue: 0.86))
+                                    ProgressView().tint(DeltaColors.purple)
                                 } else {
                                     HStack(spacing: 12) {
                                         Text(language.text("login.enter"))
@@ -672,12 +673,12 @@ struct IOSKeyLoginView: View {
                             .frame(maxWidth: .infinity)
                             .frame(height: 56)
                         }
-                        .background(Color(red: 0.53, green: 0.18, blue: 0.86).opacity(0.24), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                        .background(DeltaColors.purple.opacity(0.24), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
                         .overlay {
                             RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .stroke(Color(red: 0.53, green: 0.18, blue: 0.86).opacity(0.24), lineWidth: 1)
+                                .stroke(DeltaColors.purple.opacity(0.24), lineWidth: 1)
                         }
-                        .shadow(color: Color(red: 0.53, green: 0.18, blue: 0.86).opacity(0.10), radius: 10, y: 5)
+                        .shadow(color: DeltaColors.purple.opacity(0.10), radius: 10, y: 5)
                         .scaleEffect(pressed ? 0.97 : 1)
                         .disabled(session.isChecking)
 
@@ -705,18 +706,18 @@ struct IOSKeyLoginView: View {
                         if let error = session.errorMessage {
                             Label(error, systemImage: "exclamationmark.triangle.fill")
                                 .font(.footnote)
-                                .foregroundStyle(Color(red: 0.74, green: 0.20, blue: 0.28))
+                                .foregroundStyle(DeltaColors.purple)
                                 .multilineTextAlignment(.center)
                                 .padding(.horizontal, 16)
                         }
                     }
                     .padding(24)
-                    .background(Color(red: 0.53, green: 0.18, blue: 0.86).opacity(0.055), in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+                    .background(DeltaColors.purple.opacity(0.055), in: RoundedRectangle(cornerRadius: 26, style: .continuous))
                     .overlay {
                         RoundedRectangle(cornerRadius: 26, style: .continuous)
                             .stroke(Color.white.opacity(0.85), lineWidth: 1)
                     }
-                    .shadow(color: Color(red: 0.53, green: 0.18, blue: 0.86).opacity(0.12), radius: 22, y: 10)
+                    .shadow(color: DeltaColors.purple.opacity(0.12), radius: 22, y: 10)
                     .padding(.top, 36)
                     .padding(.horizontal, 28)
                     .offset(y: appeared ? 0 : 18)
@@ -724,7 +725,7 @@ struct IOSKeyLoginView: View {
 
                     Label(language.text("login.official_version"), systemImage: "checkmark.shield.fill")
                         .font(.system(size: 15, weight: .regular, design: .rounded))
-                        .foregroundStyle(Color(red: 0.46, green: 0.48, blue: 0.56))
+                        .foregroundStyle(DeltaColors.muted)
                         .padding(.top, 34)
 
                     Spacer(minLength: 48)
@@ -733,7 +734,8 @@ struct IOSKeyLoginView: View {
             }
             .dynamicTypeSize(.large)
         }
-        .tint(Color(red: 0.53, green: 0.18, blue: 0.86))
+        .tint(DeltaColors.purple)
+        .overlay(Color.clear.frame(width: 0, height: 0).id(themeRaw))
         .onAppear {
             withAnimation(.spring(response: 0.58, dampingFraction: 0.82)) {
                 appeared = true
