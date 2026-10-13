@@ -630,7 +630,7 @@ struct IOSKeyLoginView: View {
                                 }
                             }
                             .font(.system(size: 17, weight: .regular, design: .rounded))
-                            .foregroundStyle(Color.white.opacity(0.92))
+                            .foregroundStyle(DeltaColors.ink.opacity(0.92))
                             .tint(DeltaColors.purple)
                             .textInputAutocapitalization(.characters)
                             .autocorrectionDisabled()
@@ -640,7 +640,7 @@ struct IOSKeyLoginView: View {
                             } label: {
                                 Image(systemName: isKeyVisible ? "eye.slash.fill" : "eye.fill")
                                     .font(.system(size: 19, weight: .semibold))
-                                    .foregroundStyle(Color.white.opacity(0.86))
+                                    .foregroundStyle(DeltaColors.ink.opacity(0.86))
                                     .frame(width: 28, height: 36)
                             }
                             .buttonStyle(.plain)
@@ -672,7 +672,7 @@ struct IOSKeyLoginView: View {
                                     .font(.system(size: 18, weight: .bold, design: .rounded))
                                 }
                             }
-                            .foregroundStyle(Color.white.opacity(0.92))
+                            .foregroundStyle(DeltaColors.ink.opacity(0.92))
                             .frame(maxWidth: .infinity)
                             .frame(height: 56)
                         }
@@ -692,7 +692,7 @@ struct IOSKeyLoginView: View {
                         } label: {
                             Label(language.text("login.paste_key"), systemImage: "doc.on.clipboard")
                                 .font(.system(size: 18, weight: .semibold, design: .rounded))
-                                .foregroundStyle(Color.white.opacity(0.90))
+                                .foregroundStyle(DeltaColors.ink.opacity(0.90))
                         }
                         .buttonStyle(.plain)
 
@@ -702,7 +702,7 @@ struct IOSKeyLoginView: View {
                         } label: {
                             Label(language.text("login.clear_external"), systemImage: "trash")
                                 .font(.system(size: 16, weight: .semibold, design: .rounded))
-                                .foregroundStyle(Color.white.opacity(0.86))
+                                .foregroundStyle(DeltaColors.ink.opacity(0.86))
                         }
                         .buttonStyle(.plain)
 
@@ -718,7 +718,7 @@ struct IOSKeyLoginView: View {
                     .background(DeltaColors.purple.opacity(0.055), in: RoundedRectangle(cornerRadius: 26, style: .continuous))
                     .overlay {
                         RoundedRectangle(cornerRadius: 26, style: .continuous)
-                            .stroke(Color.white.opacity(0.85), lineWidth: 1)
+                            .stroke(DeltaColors.line, lineWidth: 1)
                     }
                     .shadow(color: DeltaColors.purple.opacity(0.12), radius: 22, y: 10)
                     .padding(.top, 36)
@@ -736,6 +736,7 @@ struct IOSKeyLoginView: View {
                 .frame(maxWidth: .infinity)
             }
             .dynamicTypeSize(.large)
+            .id("login-content-theme-\(themeRaw)-\(darkMode)")
         }
         .tint(DeltaColors.purple)
         .overlay(Color.clear.frame(width: 0, height: 0).id("login-theme-\(themeRaw)-\(darkMode)"))

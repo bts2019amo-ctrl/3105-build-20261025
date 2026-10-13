@@ -468,6 +468,8 @@ private struct DeltaDashboardView: View {
     let isVietnamese: Bool
     let appState: AppState
     let keySession: IOSKeySession
+    @AppStorage(DeltaColors.themeKey) private var themeRaw = DeltaTheme.lavender.rawValue
+    @AppStorage(DeltaColors.darkModeKey) private var darkMode = false
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -498,6 +500,7 @@ private struct DeltaDashboardView: View {
                     .transition(.opacity.combined(with: .move(edge: .trailing)))
                 }
             }
+            .id("dashboard-theme-\(themeRaw)-\(darkMode)")
             if showErrorBanner {
                 DeltaErrorBanner {
                     withAnimation(.easeOut(duration: 0.2)) { showErrorBanner = false }
