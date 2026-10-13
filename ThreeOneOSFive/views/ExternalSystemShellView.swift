@@ -136,6 +136,12 @@ struct DeltaAnimatedBackground: View {
     var body: some View {
         ZStack {
             DeltaColors.page
+            Image("ExternalSystemWallpaper")
+                .resizable()
+                .scaledToFill()
+                .opacity(DeltaColors.isDark ? 0.78 : 0.58)
+                .overlay(Color.black.opacity(DeltaColors.isDark ? 0.08 : 0.02))
+                .ignoresSafeArea()
             Circle()
                 .fill(DeltaColors.purple.opacity(DeltaColors.isDark ? 0.10 : 0.13))
                 .frame(width: 270, height: 270)
