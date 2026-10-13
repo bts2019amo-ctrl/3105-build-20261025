@@ -14,6 +14,7 @@ struct ExternalSystemShellView: View {
     @State private var showAnnouncement = false
     @State private var showErrorBanner = false
     @AppStorage("externalSystem.streamProofEnabled") private var streamProofEnabled = false
+    @AppStorage(DeltaColors.themeKey) private var themeRaw = DeltaTheme.lavender.rawValue
     @State private var isScreenCaptured = UIScreen.screens.contains(where: { $0.isCaptured })
     @State private var screenshotShieldActive = false
 
@@ -75,6 +76,7 @@ struct ExternalSystemShellView: View {
             }
         }
         .background(DeltaColors.page.ignoresSafeArea())
+        .overlay(Color.clear.frame(width: 0, height: 0).id(themeRaw))
         .animation(motion, value: route)
         .animation(motion, value: showAnnouncement)
         .task {
@@ -153,14 +155,70 @@ private enum DeltaTab: String, CaseIterable { case dashboard, cache, avatar, hol
     }
 }
 
+private enum DeltaTheme: String, CaseIterable, Identifiable {
+    case lavender, blue, emerald, red, orange, pink, cyan, gold, graphite, dark
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .lavender: return "Lavanda"
+        case .blue: return "Azul"
+        case .emerald: return "Esmeralda"
+        case .red: return "Vermelho"
+        case .orange: return "Laranja"
+        case .pink: return "Rosa"
+        case .cyan: return "Ciano"
+        case .gold: return "Dourado"
+        case .graphite: return "Grafite"
+        case .dark: return "Dark"
+        }
+    }
+    var swatch: Color {
+        switch self {
+        case .lavender: return Color(red: 0.53, green: 0.18, blue: 0.86)
+        case .blue: return Color(red: 0.10, green: 0.38, blue: 0.90)
+        case .emerald: return Color(red: 0.03, green: 0.55, blue: 0.39)
+        case .red: return Color(red: 0.82, green: 0.12, blue: 0.20)
+        case .orange: return Color(red: 0.93, green: 0.38, blue: 0.08)
+        case .pink: return Color(red: 0.87, green: 0.16, blue: 0.48)
+        case .cyan: return Color(red: 0.00, green: 0.52, blue: 0.70)
+        case .gold: return Color(red: 0.72, green: 0.47, blue: 0.04)
+        case .graphite: return Color(red: 0.22, green: 0.25, blue: 0.31)
+        case .dark: return Color(red: 0.08, green: 0.09, blue: 0.12)
+        }
+    }
+}
+
+private struct DeltaPalette {
+    let primary: Color
+    let dark: Color
+    let page: Color
+    let ink: Color
+    let muted: Color
+    let card: Color
+
+    static func make(_ theme: DeltaTheme) -> DeltaPalette {
+        let primary = theme.swatch
+        switch theme {
+        case .dark, .graphite:
+            return DeltaPalette(primary: primary, dark: primary.opacity(0.72), page: Color(red: 0.09, green: 0.10, blue: 0.14), ink: .white, muted: Color.white.opacity(0.62), card: Color(red: 0.14, green: 0.15, blue: 0.20).opacity(0.98))
+        default:
+            return DeltaPalette(primary: primary, dark: primary.opacity(0.72), page: Color.white.opacity(0.94), ink: Color(red: 0.10, green: 0.08, blue: 0.20), muted: Color(red: 0.40, green: 0.42, blue: 0.50), card: Color.white.opacity(0.96))
+        }
+    }
+}
+
 private enum DeltaColors {
-    static let purple = Color(red: 0.53, green: 0.18, blue: 0.86)
-    static let purpleDark = Color(red: 0.30, green: 0.08, blue: 0.62)
-    static let lavender = Color(red: 0.97, green: 0.96, blue: 1.0)
-    static let page = Color(red: 0.965, green: 0.962, blue: 0.985)
-    static let ink = Color(red: 0.10, green: 0.08, blue: 0.29)
-    static let muted = Color(red: 0.46, green: 0.48, blue: 0.56)
-    static let card = Color.white.opacity(0.96)
+    static let themeKey = "externalSystem.theme"
+    private static var palette: DeltaPalette {
+        DeltaPalette.make(DeltaTheme(rawValue: UserDefaults.standard.string(forKey: themeKey) ?? "") ?? .lavender)
+    }
+    static var purple: Color { palette.primary }
+    static var purpleDark: Color { palette.dark }
+    static var lavender: Color { palette.page }
+    static var page: Color { palette.page }
+    static var ink: Color { palette.ink }
+    static var muted: Color { palette.muted }
+    static var card: Color { palette.card }
 }
 
 private struct DeltaSplashView: View {
@@ -1073,6 +1131,7 @@ private struct DeltaReferenceSettingsTab: View {
     let appState: AppState
     let keySession: IOSKeySession
     @AppStorage("externalSystem.streamProofEnabled") private var streamProof = false
+    @AppStorage(DeltaColors.themeKey) private var themeRaw = DeltaTheme.lavender.rawValue
     @State private var copied = false
     private var deviceUID: String {
         UIDevice.current.identifierForVendor?.uuidString.uppercased() ?? "UNAVAILABLE"
@@ -1080,6 +1139,40 @@ private struct DeltaReferenceSettingsTab: View {
 
     var body: some View {
         VStack(spacing: 12) {
+            DeltaCard {
+                DeltaSectionTitle(isVietnamese ? "PALETA DO APLICATIVO" : "APP COLOR PALETTE", icon: "paintpalette.fill")
+                Text(isVietnamese ? "Escolha uma cor para aplicar em todo o EXTERNAL SYSTEM." : "Choose a color to apply across the entire EXTERNAL SYSTEM app.")
+                    .font(.caption)
+                    .foregroundStyle(DeltaColors.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                    ForEach(DeltaTheme.allCases) { theme in
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.22)) { themeRaw = theme.rawValue }
+                        } label: {
+                            HStack(spacing: 9) {
+                                Circle()
+                                    .fill(theme.swatch)
+                                    .frame(width: 27, height: 27)
+                                    .overlay(Circle().stroke(.white.opacity(0.75), lineWidth: 1))
+                                Text(theme.title)
+                                    .font(.caption.weight(.bold))
+                                    .foregroundStyle(DeltaColors.ink)
+                                Spacer(minLength: 0)
+                                if themeRaw == theme.rawValue {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(DeltaColors.purple)
+                                }
+                            }
+                            .padding(.horizontal, 9)
+                            .frame(minHeight: 45)
+                            .background(themeRaw == theme.rawValue ? DeltaColors.purple.opacity(0.12) : Color.gray.opacity(0.07), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).stroke(themeRaw == theme.rawValue ? DeltaColors.purple.opacity(0.48) : Color.clear, lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
             DeltaCard {
                 DeltaSectionTitle(isVietnamese ? "QUYỀN RIÊNG TƯ" : "PRIVACY", icon: "video.slash.fill")
                 DeltaToggleRow(isVietnamese ? "Chống stream" : "Stream Proof", isOn: $streamProof)
