@@ -147,6 +147,20 @@ final class PatchProjectStore: ObservableObject {
         Task { await synchronizeRemoteFeed() }
     }
 
+    private static func inferredGameCategory(name: String, fileName: String) -> PatchGameCategory {
+        let value = "\(name) \(fileName)".lowercased()
+        return value.contains("max") || value.contains("freefiremax") ? .max : .normal
+    }
+
+    private static func inferredFeatureCategory(name: String, fileName: String) -> PatchFeatureCategory {
+        let value = "\(name) \(fileName)".lowercased()
+        if value.contains("external") || value.contains("aimbot") || value.contains("esp") { return .external }
+        if value.contains("skin") { return .skin }
+        if value.contains("avatar") { return .avatar }
+        if value.contains("hologram") || value.contains("holo") { return .hologram }
+        return .cache
+    }
+
     private func synchronizeRemoteFeed() async {
         guard !isBusy else { return }
         remoteSyncState = .syncing
@@ -200,9 +214,11 @@ final class PatchProjectStore: ObservableObject {
                 do {
                     let mappedID = PatchProjectLibrary.remotePackageID(for: patch.id)
                     let hasCurrentPackage = mappedID.map { id in items.contains(where: { $0.id == id }) } ?? false
-                    guard let category = PatchGameCategory(rawValue: patch.category),
-                          let feature = PatchFeatureCategory(rawValue: patch.feature),
-                          let url = Self.remoteURL(for: patch.fileUrl) else { continue }
+                    let category = PatchGameCategory(rawValue: patch.category)
+                        ?? Self.inferredGameCategory(name: patch.name, fileName: patch.fileName)
+                    let feature = PatchFeatureCategory(rawValue: patch.feature)
+                        ?? Self.inferredFeatureCategory(name: patch.name, fileName: patch.fileName)
+                    guard let url = Self.remoteURL(for: patch.fileUrl) else { continue }
                     if hasCurrentPackage && patch.updatedAt <= PatchProjectLibrary.remoteVersion(for: patch.id) {
                         if let mappedID {
                             PatchProjectLibrary.setCategory(category, for: mappedID)
