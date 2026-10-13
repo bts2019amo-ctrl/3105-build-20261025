@@ -743,6 +743,8 @@ struct IOSKeyLoginView: View {
             .id("login-content-theme-\(themeRaw)-\(darkMode)")
 
             if animatedBackground {
+                DeltaWallpaperLayer()
+                    .zIndex(1)
                 DeltaParticleField()
                     .zIndex(2)
             }

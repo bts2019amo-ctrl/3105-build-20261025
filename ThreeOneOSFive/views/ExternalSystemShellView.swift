@@ -54,6 +54,11 @@ struct ExternalSystemShellView: View {
                 .transition(.opacity)
             }
 
+            if animatedBackground {
+                DeltaWallpaperLayer()
+                    .zIndex(1)
+            }
+
             if animatedBackground && !reduceMotion {
                 DeltaParticleField()
                     .zIndex(2)
@@ -166,6 +171,19 @@ struct DeltaAnimatedBackground: View {
                 phase = 1
             }
         }
+    }
+}
+
+struct DeltaWallpaperLayer: View {
+    var body: some View {
+        Image("ExternalSystemWallpaper")
+            .resizable()
+            .scaledToFill()
+            .opacity(DeltaColors.isDark ? 0.34 : 0.40)
+            .blendMode(.multiply)
+            .ignoresSafeArea()
+            .allowsHitTesting(false)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
