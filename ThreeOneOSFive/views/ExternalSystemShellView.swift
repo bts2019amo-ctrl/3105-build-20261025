@@ -54,6 +54,11 @@ struct ExternalSystemShellView: View {
                 .transition(.opacity)
             }
 
+            if animatedBackground && !reduceMotion {
+                DeltaParticleField()
+                    .zIndex(2)
+            }
+
             if showAnnouncement {
                 DeltaAnnouncementView(isVietnamese: isVietnamese) {
                     withAnimation(motion) {
@@ -155,6 +160,38 @@ struct DeltaAnimatedBackground: View {
                 phase = 1
             }
         }
+    }
+}
+
+struct DeltaParticleField: View {
+    var body: some View {
+        TimelineView(.animation) { timeline in
+            Canvas { context, size in
+                let time = timeline.date.timeIntervalSinceReferenceDate
+                let dark = DeltaColors.isDark
+                for index in 0..<34 {
+                    let seed = Double(index + 1)
+                    let baseX = (sin(seed * 12.9898) + 1) * 0.5
+                    let baseY = (cos(seed * 78.233) + 1) * 0.5
+                    let speed = 0.10 + (seed.truncatingRemainder(dividingBy: 5) * 0.025)
+                    let driftX = sin(time * speed + seed) * 0.035
+                    let driftY = cos(time * (speed * 0.82) + seed * 1.7) * 0.045
+                    let x = ((baseX + driftX + 1).truncatingRemainder(dividingBy: 1)) * size.width
+                    let y = ((baseY + driftY + 1).truncatingRemainder(dividingBy: 1)) * size.height
+                    let radius = 1.2 + (seed.truncatingRemainder(dividingBy: 3) * 0.55)
+                    let pulse = 0.55 + (sin(time * 1.4 + seed) * 0.25)
+                    let color = dark
+                        ? Color.white.opacity(0.16 * pulse)
+                        : DeltaColors.purple.opacity(0.24 * pulse)
+                    context.fill(
+                        Path(ellipseIn: CGRect(x: x - radius, y: y - radius, width: radius * 2, height: radius * 2)),
+                        with: .color(color)
+                    )
+                }
+            }
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
     }
 }
 

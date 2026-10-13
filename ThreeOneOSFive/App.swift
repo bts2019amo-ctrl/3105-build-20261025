@@ -741,6 +741,11 @@ struct IOSKeyLoginView: View {
             }
             .dynamicTypeSize(.large)
             .id("login-content-theme-\(themeRaw)-\(darkMode)")
+
+            if animatedBackground {
+                DeltaParticleField()
+                    .zIndex(2)
+            }
         }
         .tint(DeltaColors.purple)
         .overlay(Color.clear.frame(width: 0, height: 0).id("login-theme-\(themeRaw)-\(darkMode)"))
