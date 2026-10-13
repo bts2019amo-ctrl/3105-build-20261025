@@ -211,6 +211,7 @@ final class PatchProjectStore: ObservableObject {
             var importedCount = 0
             var skippedCount = 0
             for patch in feed.patches {
+                await Task.yield()
                 do {
                     let mappedID = PatchProjectLibrary.remotePackageID(for: patch.id)
                     let hasCurrentPackage = mappedID.map { id in items.contains(where: { $0.id == id }) } ?? false
@@ -238,41 +239,56 @@ final class PatchProjectStore: ObservableObject {
                         packageRequest,
                         session: networkSession
                     )
+                    let checksum = await Task.detached(priority: .utility) {
+                        Self.sha256Hex(packageData)
+                    }.value
                     guard let packageResponse = packageResponse as? HTTPURLResponse,
                           (200..<300).contains(packageResponse.statusCode),
-                          Self.sha256Hex(packageData) == patch.checksumSha256.lowercased() else { continue }
-                    var summary = try PatchPackageCodec.inspect(packageData)
+                          checksum == patch.checksumSha256.lowercased() else { continue }
+                    var summary = try await Task.detached(priority: .utility) {
+                        try PatchPackageCodec.inspect(packageData)
+                    }.value
                     var existingURL = items.first(where: { $0.id == mappedID })?.packageURL
                     if (mappedID == nil || (mappedID != nil && claimedPackageIDs.contains(mappedID!)))
                         && reservedPackageIDs.contains(summary.packageID) {
-                        let decoded = try PatchPackageCodec.decode(packageData, password: nil)
+                        let decoded = try await Task.detached(priority: .utility) {
+                            try PatchPackageCodec.decode(packageData, password: nil)
+                        }.value
                         let newID = UUID()
-                        packageData = try PatchPackageCodec.reidentifyPublicPackage(
-                            packageData,
-                            decoded: decoded,
-                            newID: newID
-                        )
-                        summary = try PatchPackageCodec.inspect(packageData)
+                        packageData = try await Task.detached(priority: .utility) {
+                            try PatchPackageCodec.reidentifyPublicPackage(
+                                packageData,
+                                decoded: decoded,
+                                newID: newID
+                            )
+                        }.value
+                        summary = try await Task.detached(priority: .utility) {
+                            try PatchPackageCodec.inspect(packageData)
+                        }.value
                         existingURL = nil
                     }
-                    let pendingUnlock = try Self.persistImportedPackage(
-                        data: packageData,
-                        summary: summary,
-                        existingURL: existingURL,
-                        category: category,
-                        feature: feature,
-                        remoteID: patch.id,
-                        remoteVersion: patch.updatedAt,
-                        remoteName: patch.name
-                    )
-                    if pendingUnlock != nil {
-                        _ = try PatchProjectLibrary.save(
+                    let pendingUnlock = try await Task.detached(priority: .utility) {
+                        try Self.persistImportedPackage(
                             data: packageData,
-                            projectName: patch.name,
-                            existingURL: existingURL
+                            summary: summary,
+                            existingURL: existingURL,
+                            category: category,
+                            feature: feature,
+                            remoteID: patch.id,
+                            remoteVersion: patch.updatedAt,
+                            remoteName: patch.name
                         )
-                        PatchProjectLibrary.setCategory(category, for: summary.packageID)
-                        PatchProjectLibrary.setFeatureCategory(feature, for: summary.packageID)
+                    }.value
+                    if pendingUnlock != nil {
+                        try await Task.detached(priority: .utility) {
+                            _ = try PatchProjectLibrary.save(
+                                data: packageData,
+                                projectName: patch.name,
+                                existingURL: existingURL
+                            )
+                            PatchProjectLibrary.setCategory(category, for: summary.packageID)
+                            PatchProjectLibrary.setFeatureCategory(feature, for: summary.packageID)
+                        }.value
                     }
                     PatchProjectLibrary.setRemotePackageID(summary.packageID, for: patch.id)
                     PatchProjectLibrary.setRemoteVersion(patch.updatedAt, for: patch.id)
@@ -293,10 +309,14 @@ final class PatchProjectStore: ObservableObject {
                     continue
                 }
             }
-            PatchProjectLibrary.removeRemotePackagesNotInFeed(
-                remoteIDs: Set(feed.patches.map(\.id))
-            )
-            reload()
+            await Task.detached(priority: .utility) {
+                PatchProjectLibrary.removeRemotePackagesNotInFeed(
+                    remoteIDs: Set(feed.patches.map(\.id))
+                )
+            }.value
+            items = await Task.detached(priority: .utility) {
+                PatchProjectLibrary.load()
+            }.value
             remoteSyncState = .online
             lastRemoteSyncAt = Date()
             lastRemoteSyncError = skippedCount == 0
