@@ -738,7 +738,7 @@ struct IOSKeyLoginView: View {
             .dynamicTypeSize(.large)
         }
         .tint(DeltaColors.purple)
-        .overlay(Color.clear.frame(width: 0, height: 0).id(themeRaw))
+        .overlay(Color.clear.frame(width: 0, height: 0).id("login-theme-\(themeRaw)-\(darkMode)"))
         .preferredColorScheme(darkMode ? .dark : .light)
         .onAppear {
             withAnimation(.spring(response: 0.58, dampingFraction: 0.82)) {

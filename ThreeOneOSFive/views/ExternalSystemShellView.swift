@@ -77,7 +77,7 @@ struct ExternalSystemShellView: View {
             }
         }
         .background(DeltaColors.page.ignoresSafeArea())
-        .overlay(Color.clear.frame(width: 0, height: 0).id(themeRaw))
+        .overlay(Color.clear.frame(width: 0, height: 0).id("shell-theme-\(themeRaw)-\(darkMode)"))
         .preferredColorScheme(darkMode ? .dark : .light)
         .animation(motion, value: route)
         .animation(motion, value: showAnnouncement)
@@ -234,7 +234,7 @@ private struct DeltaSplashView: View {
     var body: some View {
         ZStack {
             LinearGradient(
-                colors: [DeltaColors.page, Color(red: 0.93, green: 0.89, blue: 0.99), DeltaColors.page],
+                colors: [DeltaColors.page, DeltaColors.purple.opacity(0.12), DeltaColors.page],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
@@ -816,7 +816,7 @@ private struct DeltaHomeTab: View {
                 .foregroundStyle(DeltaColors.purple)
         }
         .frame(maxWidth: .infinity, minHeight: emphasized ? 62 : 54)
-        .background(Color(red: 0.97, green: 0.97, blue: 0.99), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+        .background(DeltaColors.card, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 }
 
@@ -1265,7 +1265,7 @@ private struct DeltaMetric: View {
     let subtitle: String
     let icon: String
     init(_ title: String, subtitle: String, icon: String) { self.title = title; self.subtitle = subtitle; self.icon = icon }
-    var body: some View { VStack(alignment: .leading, spacing: 3) { Image(systemName: icon).font(.caption2).foregroundStyle(DeltaColors.purple); Text(title).font(.caption2.weight(.bold)).foregroundStyle(DeltaColors.ink); Text(subtitle).font(.system(size: 8)).foregroundStyle(DeltaColors.muted) }.frame(maxWidth: .infinity, alignment: .leading).padding(8).background(Color(red: 0.97, green: 0.97, blue: 0.99), in: RoundedRectangle(cornerRadius: 7)) }
+    var body: some View { VStack(alignment: .leading, spacing: 3) { Image(systemName: icon).font(.caption2).foregroundStyle(DeltaColors.purple); Text(title).font(.caption2.weight(.bold)).foregroundStyle(DeltaColors.ink); Text(subtitle).font(.system(size: 8)).foregroundStyle(DeltaColors.muted) }.frame(maxWidth: .infinity, alignment: .leading).padding(8).background(DeltaColors.card, in: RoundedRectangle(cornerRadius: 7)) }
 }
 
 private struct DeltaToggleStyle: ToggleStyle {
