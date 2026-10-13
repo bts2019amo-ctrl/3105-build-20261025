@@ -575,6 +575,7 @@ struct IOSKeyLoginView: View {
     @State private var pressed = false
     @AppStorage(DeltaColors.themeKey) private var themeRaw = DeltaTheme.lavender.rawValue
     @AppStorage(DeltaColors.darkModeKey) private var darkMode = false
+    @AppStorage(DeltaColors.customHueKey) private var customHue = 0.76
 
     var body: some View {
         ZStack {
@@ -736,11 +737,11 @@ struct IOSKeyLoginView: View {
                 .frame(maxWidth: .infinity)
             }
             .dynamicTypeSize(.large)
-            .id("login-content-theme-\(themeRaw)-\(darkMode)")
+            .id("login-content-theme-\(themeRaw)-\(darkMode)-\(customHue)")
 
         }
         .tint(DeltaColors.purple)
-        .overlay(Color.clear.frame(width: 0, height: 0).id("login-theme-\(themeRaw)-\(darkMode)"))
+        .overlay(Color.clear.frame(width: 0, height: 0).id("login-theme-\(themeRaw)-\(darkMode)-\(customHue)"))
         .preferredColorScheme(darkMode ? .dark : .light)
         .onAppear {
             withAnimation(.spring(response: 0.58, dampingFraction: 0.82)) {

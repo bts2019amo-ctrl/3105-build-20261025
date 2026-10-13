@@ -16,6 +16,7 @@ struct ExternalSystemShellView: View {
     @AppStorage("externalSystem.streamProofEnabled") private var streamProofEnabled = false
     @AppStorage(DeltaColors.themeKey) private var themeRaw = DeltaTheme.lavender.rawValue
     @AppStorage(DeltaColors.darkModeKey) private var darkMode = false
+    @AppStorage(DeltaColors.customHueKey) private var customHue = 0.76
     @State private var isScreenCaptured = UIScreen.screens.contains(where: { $0.isCaptured })
     @State private var screenshotShieldActive = false
 
@@ -77,7 +78,7 @@ struct ExternalSystemShellView: View {
             }
         }
         .background(DeltaColors.page.ignoresSafeArea())
-        .overlay(Color.clear.frame(width: 0, height: 0).id("shell-theme-\(themeRaw)-\(darkMode)"))
+        .overlay(Color.clear.frame(width: 0, height: 0).id("shell-theme-\(themeRaw)-\(darkMode)-\(customHue)"))
         .preferredColorScheme(darkMode ? .dark : .light)
         .animation(motion, value: route)
         .animation(motion, value: showAnnouncement)
@@ -115,6 +116,71 @@ struct ExternalSystemShellView: View {
                 }
                 try? await Task.sleep(nanoseconds: 50_000_000)
             }
+        }
+    }
+}
+
+private struct DeltaColorWheel: View {
+    @Binding var selectedHue: Double
+
+    private let wheelColors: [Color] = [
+        Color(hue: 0.00, saturation: 1, brightness: 1),
+        Color(hue: 0.08, saturation: 1, brightness: 1),
+        Color(hue: 0.17, saturation: 1, brightness: 1),
+        Color(hue: 0.33, saturation: 1, brightness: 1),
+        Color(hue: 0.52, saturation: 1, brightness: 1),
+        Color(hue: 0.67, saturation: 1, brightness: 1),
+        Color(hue: 0.82, saturation: 1, brightness: 1),
+        Color(hue: 0.94, saturation: 1, brightness: 1),
+        Color(hue: 1.00, saturation: 1, brightness: 1)
+    ]
+
+    var body: some View {
+        GeometryReader { proxy in
+            let side = min(proxy.size.width, proxy.size.height)
+            let center = CGPoint(x: proxy.size.width / 2, y: proxy.size.height / 2)
+            let radius = side * 0.39
+            ZStack {
+                Circle()
+                    .strokeBorder(
+                        AngularGradient(colors: wheelColors, center: .center),
+                        lineWidth: side * 0.16
+                    )
+                    .shadow(color: Color(hue: selectedHue, saturation: 0.9, brightness: 1).opacity(0.55), radius: 18)
+                Circle()
+                    .fill(DeltaColors.card)
+                    .frame(width: side * 0.52, height: side * 0.52)
+                    .overlay {
+                        VStack(spacing: 3) {
+                            Image(systemName: "wand.and.stars")
+                                .font(.system(size: 22, weight: .bold))
+                                .foregroundStyle(DeltaColors.purple)
+                            Text("COLOR")
+                                .font(.system(size: 9, weight: .black, design: .rounded))
+                                .foregroundStyle(DeltaColors.muted)
+                        }
+                    }
+                    .shadow(color: DeltaColors.purple.opacity(0.22), radius: 15)
+                Circle()
+                    .fill(Color(hue: selectedHue, saturation: 0.94, brightness: 1.0))
+                    .frame(width: side * 0.095, height: side * 0.095)
+                    .overlay(Circle().stroke(.white, lineWidth: 3))
+                    .shadow(color: Color(hue: selectedHue, saturation: 0.94, brightness: 1.0).opacity(0.9), radius: 9)
+                    .offset(
+                        x: cos(selectedHue * 2 * .pi) * radius,
+                        y: sin(selectedHue * 2 * .pi) * radius
+                    )
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .gesture(DragGesture(minimumDistance: 0).onChanged { value in
+                let dx = value.location.x - center.x
+                let dy = value.location.y - center.y
+                guard (dx * dx + dy * dy) > (side * 0.18) * (side * 0.18) else { return }
+                var hue = atan2(dy, dx) / (2 * .pi)
+                if hue < 0 { hue += 1 }
+                selectedHue = hue
+            })
         }
     }
 }
@@ -200,17 +266,19 @@ struct DeltaPalette {
     let line: Color
 
     static func make(_ theme: DeltaTheme, darkMode: Bool) -> DeltaPalette {
-        let primary = theme.swatch
+        let storedHue = UserDefaults.standard.object(forKey: DeltaColors.customHueKey) as? Double
+        let primary = storedHue.map { Color(hue: $0, saturation: 0.92, brightness: 1.0) } ?? theme.swatch
         if darkMode || theme == .dark {
-            return DeltaPalette(primary: primary, dark: primary.opacity(0.72), page: Color(red: 0.015, green: 0.015, blue: 0.018), ink: Color(red: 0.94, green: 0.94, blue: 0.95), muted: Color.white.opacity(0.58), card: Color(red: 0.035, green: 0.035, blue: 0.042).opacity(0.99), line: Color.black.opacity(0.88))
+            return DeltaPalette(primary: primary, dark: Color(hue: storedHue ?? 0.76, saturation: 0.90, brightness: 0.72), page: Color(red: 0.008, green: 0.006, blue: 0.014), ink: Color.white.opacity(0.96), muted: Color(hue: storedHue ?? 0.76, saturation: 0.12, brightness: 0.78), card: Color(red: 0.025, green: 0.018, blue: 0.040).opacity(0.99), line: primary.opacity(0.20))
         }
-        return DeltaPalette(primary: primary, dark: primary.opacity(0.72), page: Color.white.opacity(0.94), ink: Color(red: 0.10, green: 0.08, blue: 0.20), muted: Color(red: 0.40, green: 0.42, blue: 0.50), card: Color.white.opacity(0.96), line: Color.white.opacity(0.90))
+        return DeltaPalette(primary: primary, dark: Color(hue: storedHue ?? 0.76, saturation: 0.86, brightness: 0.72), page: Color(hue: storedHue ?? 0.76, saturation: 0.07, brightness: 0.985), ink: Color(hue: storedHue ?? 0.76, saturation: 0.55, brightness: 0.18), muted: Color(hue: storedHue ?? 0.76, saturation: 0.18, brightness: 0.45), card: Color.white.opacity(0.96), line: primary.opacity(0.16))
     }
 }
 
 enum DeltaColors {
     static let themeKey = "externalSystem.theme"
     static let darkModeKey = "externalSystem.darkMode"
+    static let customHueKey = "externalSystem.customHue"
     private static var palette: DeltaPalette {
         let theme = DeltaTheme(rawValue: UserDefaults.standard.string(forKey: themeKey) ?? "") ?? .lavender
         return DeltaPalette.make(theme, darkMode: UserDefaults.standard.bool(forKey: darkModeKey))
@@ -1156,6 +1224,7 @@ private struct DeltaReferenceSettingsTab: View {
     @AppStorage("externalSystem.streamProofEnabled") private var streamProof = false
     @AppStorage(DeltaColors.themeKey) private var themeRaw = DeltaTheme.lavender.rawValue
     @AppStorage(DeltaColors.darkModeKey) private var darkMode = false
+    @AppStorage(DeltaColors.customHueKey) private var customHue = 0.76
     @State private var copied = false
     private var deviceUID: String {
         UIDevice.current.identifierForVendor?.uuidString.uppercased() ?? "UNAVAILABLE"
@@ -1169,33 +1238,25 @@ private struct DeltaReferenceSettingsTab: View {
                     .font(.caption)
                     .foregroundStyle(DeltaColors.muted)
                     .fixedSize(horizontal: false, vertical: true)
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
-                    ForEach(DeltaTheme.allCases) { theme in
-                        Button {
-                            withAnimation(.easeInOut(duration: 0.22)) { themeRaw = theme.rawValue }
-                        } label: {
-                            HStack(spacing: 9) {
-                                Circle()
-                                    .fill(theme.swatch)
-                                    .frame(width: 27, height: 27)
-                                    .overlay(Circle().stroke(.white.opacity(0.75), lineWidth: 1))
-                                Text(theme.title)
-                                    .font(.caption.weight(.bold))
-                                    .foregroundStyle(DeltaColors.ink)
-                                Spacer(minLength: 0)
-                                if themeRaw == theme.rawValue {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundStyle(DeltaColors.purple)
-                                }
-                            }
-                            .padding(.horizontal, 9)
-                            .frame(minHeight: 45)
-                            .background(themeRaw == theme.rawValue ? DeltaColors.purple.opacity(0.12) : Color.gray.opacity(0.07), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
-                            .overlay(RoundedRectangle(cornerRadius: 11, style: .continuous).stroke(themeRaw == theme.rawValue ? DeltaColors.purple.opacity(0.48) : Color.clear, lineWidth: 1))
-                        }
-                        .buttonStyle(.plain)
+                DeltaColorWheel(selectedHue: $customHue)
+                    .frame(height: 190)
+                HStack(spacing: 12) {
+                    Circle()
+                        .fill(Color(hue: customHue, saturation: 0.90, brightness: 1.0))
+                        .frame(width: 34, height: 34)
+                        .overlay(Circle().stroke(.white.opacity(0.88), lineWidth: 2))
+                        .shadow(color: Color(hue: customHue, saturation: 0.90, brightness: 1.0).opacity(0.75), radius: 12)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(isVietnamese ? "Cor viva" : "Live color")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(DeltaColors.ink)
+                        Text(isVietnamese ? "Arraste na roda para mudar instantaneamente." : "Drag around the wheel to change it instantly.")
+                            .font(.caption2)
+                            .foregroundStyle(DeltaColors.muted)
                     }
+                    Spacer()
                 }
+                .padding(.horizontal, 4)
             }
             DeltaCard {
                 DeltaSectionTitle(isVietnamese ? "QUYỀN RIÊNG TƯ" : "PRIVACY", icon: "video.slash.fill")
