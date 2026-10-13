@@ -575,11 +575,15 @@ struct IOSKeyLoginView: View {
     @State private var pressed = false
     @AppStorage(DeltaColors.themeKey) private var themeRaw = DeltaTheme.lavender.rawValue
     @AppStorage(DeltaColors.darkModeKey) private var darkMode = false
+    @AppStorage(DeltaColors.animatedBackgroundKey) private var animatedBackground = true
 
     var body: some View {
         ZStack {
-            DeltaColors.page
-                .ignoresSafeArea()
+            if animatedBackground {
+                DeltaAnimatedBackground()
+            } else {
+                DeltaColors.page.ignoresSafeArea()
+            }
 
             Circle()
                 .fill(DeltaColors.purple.opacity(0.025))
