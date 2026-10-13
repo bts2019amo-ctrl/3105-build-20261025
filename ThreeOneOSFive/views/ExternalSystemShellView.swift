@@ -15,6 +15,7 @@ struct ExternalSystemShellView: View {
     @State private var showErrorBanner = false
     @AppStorage("externalSystem.streamProofEnabled") private var streamProofEnabled = false
     @AppStorage(DeltaColors.themeKey) private var themeRaw = DeltaTheme.lavender.rawValue
+    @AppStorage(DeltaColors.darkModeKey) private var darkMode = false
     @State private var isScreenCaptured = UIScreen.screens.contains(where: { $0.isCaptured })
     @State private var screenshotShieldActive = false
 
@@ -77,6 +78,7 @@ struct ExternalSystemShellView: View {
         }
         .background(DeltaColors.page.ignoresSafeArea())
         .overlay(Color.clear.frame(width: 0, height: 0).id(themeRaw))
+        .preferredColorScheme(darkMode ? .dark : .light)
         .animation(motion, value: route)
         .animation(motion, value: showAnnouncement)
         .task {
@@ -196,21 +198,21 @@ struct DeltaPalette {
     let muted: Color
     let card: Color
 
-    static func make(_ theme: DeltaTheme) -> DeltaPalette {
+    static func make(_ theme: DeltaTheme, darkMode: Bool) -> DeltaPalette {
         let primary = theme.swatch
-        switch theme {
-        case .dark, .graphite:
+        if darkMode || theme == .dark {
             return DeltaPalette(primary: primary, dark: primary.opacity(0.72), page: Color(red: 0.09, green: 0.10, blue: 0.14), ink: .white, muted: Color.white.opacity(0.62), card: Color(red: 0.14, green: 0.15, blue: 0.20).opacity(0.98))
-        default:
-            return DeltaPalette(primary: primary, dark: primary.opacity(0.72), page: Color.white.opacity(0.94), ink: Color(red: 0.10, green: 0.08, blue: 0.20), muted: Color(red: 0.40, green: 0.42, blue: 0.50), card: Color.white.opacity(0.96))
         }
+        return DeltaPalette(primary: primary, dark: primary.opacity(0.72), page: Color.white.opacity(0.94), ink: Color(red: 0.10, green: 0.08, blue: 0.20), muted: Color(red: 0.40, green: 0.42, blue: 0.50), card: Color.white.opacity(0.96))
     }
 }
 
 enum DeltaColors {
     static let themeKey = "externalSystem.theme"
+    static let darkModeKey = "externalSystem.darkMode"
     private static var palette: DeltaPalette {
-        DeltaPalette.make(DeltaTheme(rawValue: UserDefaults.standard.string(forKey: themeKey) ?? "") ?? .lavender)
+        let theme = DeltaTheme(rawValue: UserDefaults.standard.string(forKey: themeKey) ?? "") ?? .lavender
+        return DeltaPalette.make(theme, darkMode: UserDefaults.standard.bool(forKey: darkModeKey))
     }
     static var purple: Color { palette.primary }
     static var purpleDark: Color { palette.dark }
@@ -1132,6 +1134,7 @@ private struct DeltaReferenceSettingsTab: View {
     let keySession: IOSKeySession
     @AppStorage("externalSystem.streamProofEnabled") private var streamProof = false
     @AppStorage(DeltaColors.themeKey) private var themeRaw = DeltaTheme.lavender.rawValue
+    @AppStorage(DeltaColors.darkModeKey) private var darkMode = false
     @State private var copied = false
     private var deviceUID: String {
         UIDevice.current.identifierForVendor?.uuidString.uppercased() ?? "UNAVAILABLE"
@@ -1176,6 +1179,13 @@ private struct DeltaReferenceSettingsTab: View {
             DeltaCard {
                 DeltaSectionTitle(isVietnamese ? "QUYỀN RIÊNG TƯ" : "PRIVACY", icon: "video.slash.fill")
                 DeltaToggleRow(isVietnamese ? "Chống stream" : "Stream Proof", isOn: $streamProof)
+            }
+            DeltaCard {
+                DeltaSectionTitle(isVietnamese ? "APARÊNCIA" : "APPEARANCE", icon: darkMode ? "moon.fill" : "sun.max.fill")
+                DeltaToggleRow(darkMode ? "Dark" : "Claro", isOn: $darkMode)
+                Text(isVietnamese ? "A alteração é aplicada instantaneamente em todas as telas." : "The change is applied instantly across every screen.")
+                    .font(.caption2)
+                    .foregroundStyle(DeltaColors.muted)
             }
             DeltaCard {
                 DeltaSectionTitle(isVietnamese ? "THÔNG TIN BẢN QUYỀN" : "LICENSE INFORMATION", icon: "key.fill")

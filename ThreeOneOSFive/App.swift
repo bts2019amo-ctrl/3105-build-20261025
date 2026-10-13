@@ -16,6 +16,7 @@ struct ThreeOneOSFiveApp: App {
     @AppStorage(AppLanguage.storageKey) private var languageCode = AppLanguage.english.rawValue
     @AppStorage(AppTheme.accentPaletteStorageKey)
     private var accentPalette = AppTheme.defaultAccentPalette
+    @AppStorage("externalSystem.darkMode") private var externalDarkMode = false
     @State private var showOnboarding = false
     @State private var showAttribution = false
     @State private var updateOffer: AppUpdateChecker.Offer?
@@ -127,6 +128,7 @@ struct ThreeOneOSFiveApp: App {
                 patchDraftCoordinator.presentImport(url)
             }
             .tint(AppTheme.accent)
+            .preferredColorScheme(externalDarkMode ? .dark : .light)
         }
     }
 }
@@ -572,6 +574,7 @@ struct IOSKeyLoginView: View {
     @State private var appeared = false
     @State private var pressed = false
     @AppStorage(DeltaColors.themeKey) private var themeRaw = DeltaTheme.lavender.rawValue
+    @AppStorage(DeltaColors.darkModeKey) private var darkMode = false
 
     var body: some View {
         ZStack {
@@ -736,6 +739,7 @@ struct IOSKeyLoginView: View {
         }
         .tint(DeltaColors.purple)
         .overlay(Color.clear.frame(width: 0, height: 0).id(themeRaw))
+        .preferredColorScheme(darkMode ? .dark : .light)
         .onAppear {
             withAnimation(.spring(response: 0.58, dampingFraction: 0.82)) {
                 appeared = true
