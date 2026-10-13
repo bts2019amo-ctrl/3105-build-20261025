@@ -575,15 +575,11 @@ struct IOSKeyLoginView: View {
     @State private var pressed = false
     @AppStorage(DeltaColors.themeKey) private var themeRaw = DeltaTheme.lavender.rawValue
     @AppStorage(DeltaColors.darkModeKey) private var darkMode = false
-    @AppStorage(DeltaColors.animatedBackgroundKey) private var animatedBackground = true
 
     var body: some View {
         ZStack {
-            if animatedBackground {
-                DeltaAnimatedBackground()
-            } else {
-                DeltaColors.page.ignoresSafeArea()
-            }
+            DeltaColors.page
+                .ignoresSafeArea()
 
             Circle()
                 .fill(DeltaColors.purple.opacity(0.025))
@@ -742,12 +738,6 @@ struct IOSKeyLoginView: View {
             .dynamicTypeSize(.large)
             .id("login-content-theme-\(themeRaw)-\(darkMode)")
 
-            if animatedBackground {
-                DeltaWallpaperLayer()
-                    .zIndex(1)
-                DeltaParticleField()
-                    .zIndex(2)
-            }
         }
         .tint(DeltaColors.purple)
         .overlay(Color.clear.frame(width: 0, height: 0).id("login-theme-\(themeRaw)-\(darkMode)"))

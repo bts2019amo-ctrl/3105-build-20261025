@@ -16,7 +16,6 @@ struct ExternalSystemShellView: View {
     @AppStorage("externalSystem.streamProofEnabled") private var streamProofEnabled = false
     @AppStorage(DeltaColors.themeKey) private var themeRaw = DeltaTheme.lavender.rawValue
     @AppStorage(DeltaColors.darkModeKey) private var darkMode = false
-    @AppStorage(DeltaColors.animatedBackgroundKey) private var animatedBackground = true
     @State private var isScreenCaptured = UIScreen.screens.contains(where: { $0.isCaptured })
     @State private var screenshotShieldActive = false
 
@@ -25,10 +24,6 @@ struct ExternalSystemShellView: View {
 
     var body: some View {
         ZStack {
-            if animatedBackground && !reduceMotion {
-                DeltaAnimatedBackground()
-                    .transition(.opacity)
-            }
             switch route {
             case .splash:
                 DeltaSplashView()
@@ -52,16 +47,6 @@ struct ExternalSystemShellView: View {
                     keySession: keySession
                 )
                 .transition(.opacity)
-            }
-
-            if animatedBackground {
-                DeltaWallpaperLayer()
-                    .zIndex(1)
-            }
-
-            if animatedBackground && !reduceMotion {
-                DeltaParticleField()
-                    .zIndex(2)
             }
 
             if showAnnouncement {
@@ -131,101 +116,6 @@ struct ExternalSystemShellView: View {
                 try? await Task.sleep(nanoseconds: 50_000_000)
             }
         }
-    }
-}
-
-struct DeltaAnimatedBackground: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var phase: CGFloat = 0
-
-    var body: some View {
-        ZStack {
-            DeltaColors.page
-            Image("ExternalSystemWallpaper")
-                .resizable()
-                .scaledToFill()
-                .opacity(DeltaColors.isDark ? 0.78 : 0.58)
-                .overlay(Color.black.opacity(DeltaColors.isDark ? 0.08 : 0.02))
-                .ignoresSafeArea()
-            Circle()
-                .fill(DeltaColors.purple.opacity(DeltaColors.isDark ? 0.10 : 0.13))
-                .frame(width: 270, height: 270)
-                .blur(radius: 34)
-                .offset(x: -120 + (phase * 100), y: -250 + (phase * 70))
-            Circle()
-                .fill(DeltaColors.purpleDark.opacity(DeltaColors.isDark ? 0.07 : 0.10))
-                .frame(width: 230, height: 230)
-                .blur(radius: 40)
-                .offset(x: 145 - (phase * 120), y: 260 - (phase * 90))
-            Circle()
-                .fill(DeltaColors.purple.opacity(DeltaColors.isDark ? 0.045 : 0.065))
-                .frame(width: 190, height: 190)
-                .blur(radius: 30)
-                .offset(x: 155 - (phase * 70), y: -40 + (phase * 150))
-        }
-        .ignoresSafeArea()
-        .allowsHitTesting(false)
-        .onAppear {
-            guard !reduceMotion else { return }
-            withAnimation(.easeInOut(duration: 8).repeatForever(autoreverses: true)) {
-                phase = 1
-            }
-        }
-    }
-}
-
-struct DeltaWallpaperLayer: View {
-    var body: some View {
-        Image("ExternalSystemWallpaper")
-            .resizable()
-            .scaledToFill()
-            .opacity(DeltaColors.isDark ? 0.34 : 0.40)
-            .blendMode(.multiply)
-            .ignoresSafeArea()
-            .allowsHitTesting(false)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-}
-
-struct DeltaParticleField: View {
-    var body: some View {
-        TimelineView(.animation) { timeline in
-            Canvas { context, size in
-                let time = timeline.date.timeIntervalSinceReferenceDate
-                let dark = DeltaColors.isDark
-                for index in 0..<72 {
-                    let seed = Double(index + 1)
-                    let baseX = (sin(seed * 12.9898) + 1) * 0.5
-                    let baseY = (cos(seed * 78.233) + 1) * 0.5
-                    let speed = 0.16 + (seed.truncatingRemainder(dividingBy: 5) * 0.035)
-                    let driftX = sin(time * speed + seed) * 0.075
-                    let fallSpeed = 0.018 + (seed.truncatingRemainder(dividingBy: 4) * 0.006)
-                    let driftY = (baseY + (time * fallSpeed)).truncatingRemainder(dividingBy: 1)
-                    let x = ((baseX + driftX + 1).truncatingRemainder(dividingBy: 1)) * size.width
-                    let y = ((baseY + driftY + 1).truncatingRemainder(dividingBy: 1)) * size.height
-                    let radius = 2.0 + (seed.truncatingRemainder(dividingBy: 4) * 0.75)
-                    let pulse = 0.72 + (sin(time * 1.4 + seed) * 0.22)
-                    let color = dark
-                        ? Color.white.opacity(0.62 * pulse)
-                        : DeltaColors.purple.opacity(0.72 * pulse)
-                    let glow = dark
-                        ? Color.white.opacity(0.16 * pulse)
-                        : DeltaColors.purple.opacity(0.18 * pulse)
-                    context.fill(
-                        Path(ellipseIn: CGRect(x: x - radius * 2.5, y: y - radius * 2.5, width: radius * 5, height: radius * 5)),
-                        with: .color(glow)
-                    )
-                    context.fill(
-                        Path(ellipseIn: CGRect(x: x - radius, y: y - radius, width: radius * 2, height: radius * 2)),
-                        with: .color(color)
-                    )
-                }
-            }
-        }
-        .ignoresSafeArea()
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .allowsHitTesting(false)
-        .blendMode(.screen)
     }
 }
 
@@ -321,7 +211,6 @@ struct DeltaPalette {
 enum DeltaColors {
     static let themeKey = "externalSystem.theme"
     static let darkModeKey = "externalSystem.darkMode"
-    static let animatedBackgroundKey = "externalSystem.animatedBackground"
     private static var palette: DeltaPalette {
         let theme = DeltaTheme(rawValue: UserDefaults.standard.string(forKey: themeKey) ?? "") ?? .lavender
         return DeltaPalette.make(theme, darkMode: UserDefaults.standard.bool(forKey: darkModeKey))
@@ -1260,7 +1149,6 @@ private struct DeltaReferenceSettingsTab: View {
     @AppStorage("externalSystem.streamProofEnabled") private var streamProof = false
     @AppStorage(DeltaColors.themeKey) private var themeRaw = DeltaTheme.lavender.rawValue
     @AppStorage(DeltaColors.darkModeKey) private var darkMode = false
-    @AppStorage(DeltaColors.animatedBackgroundKey) private var animatedBackground = true
     @State private var copied = false
     private var deviceUID: String {
         UIDevice.current.identifierForVendor?.uuidString.uppercased() ?? "UNAVAILABLE"
@@ -1310,10 +1198,6 @@ private struct DeltaReferenceSettingsTab: View {
                 DeltaSectionTitle(isVietnamese ? "APARÊNCIA" : "APPEARANCE", icon: darkMode ? "moon.fill" : "sun.max.fill")
                 DeltaToggleRow(darkMode ? "Dark" : "Claro", isOn: $darkMode)
                 Text(isVietnamese ? "A alteração é aplicada instantaneamente em todas as telas." : "The change is applied instantly across every screen.")
-                    .font(.caption2)
-                    .foregroundStyle(DeltaColors.muted)
-                DeltaToggleRow(isVietnamese ? "Fundo animado" : "Animated background", isOn: $animatedBackground)
-                Text(isVietnamese ? "Ative ou desative o movimento do fundo em todas as telas." : "Turn the animated background on or off across every screen.")
                     .font(.caption2)
                     .foregroundStyle(DeltaColors.muted)
             }
