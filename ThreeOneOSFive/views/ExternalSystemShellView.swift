@@ -169,20 +169,27 @@ struct DeltaParticleField: View {
             Canvas { context, size in
                 let time = timeline.date.timeIntervalSinceReferenceDate
                 let dark = DeltaColors.isDark
-                for index in 0..<34 {
+                for index in 0..<72 {
                     let seed = Double(index + 1)
                     let baseX = (sin(seed * 12.9898) + 1) * 0.5
                     let baseY = (cos(seed * 78.233) + 1) * 0.5
-                    let speed = 0.10 + (seed.truncatingRemainder(dividingBy: 5) * 0.025)
-                    let driftX = sin(time * speed + seed) * 0.035
-                    let driftY = cos(time * (speed * 0.82) + seed * 1.7) * 0.045
+                    let speed = 0.16 + (seed.truncatingRemainder(dividingBy: 5) * 0.035)
+                    let driftX = sin(time * speed + seed) * 0.075
+                    let driftY = cos(time * (speed * 0.82) + seed * 1.7) * 0.085
                     let x = ((baseX + driftX + 1).truncatingRemainder(dividingBy: 1)) * size.width
                     let y = ((baseY + driftY + 1).truncatingRemainder(dividingBy: 1)) * size.height
-                    let radius = 1.2 + (seed.truncatingRemainder(dividingBy: 3) * 0.55)
-                    let pulse = 0.55 + (sin(time * 1.4 + seed) * 0.25)
+                    let radius = 2.0 + (seed.truncatingRemainder(dividingBy: 4) * 0.75)
+                    let pulse = 0.72 + (sin(time * 1.4 + seed) * 0.22)
                     let color = dark
+                        ? Color.white.opacity(0.62 * pulse)
+                        : DeltaColors.purple.opacity(0.72 * pulse)
+                    let glow = dark
                         ? Color.white.opacity(0.16 * pulse)
-                        : DeltaColors.purple.opacity(0.24 * pulse)
+                        : DeltaColors.purple.opacity(0.18 * pulse)
+                    context.fill(
+                        Path(ellipseIn: CGRect(x: x - radius * 2.5, y: y - radius * 2.5, width: radius * 5, height: radius * 5)),
+                        with: .color(glow)
+                    )
                     context.fill(
                         Path(ellipseIn: CGRect(x: x - radius, y: y - radius, width: radius * 2, height: radius * 2)),
                         with: .color(color)
@@ -191,7 +198,9 @@ struct DeltaParticleField: View {
             }
         }
         .ignoresSafeArea()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .allowsHitTesting(false)
+        .blendMode(.screen)
     }
 }
 
