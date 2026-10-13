@@ -142,7 +142,7 @@ struct DeltaAnimatedBackground: View {
                 .blur(radius: 40)
                 .offset(x: 145 - (phase * 120), y: 260 - (phase * 90))
             Circle()
-                .fill(DeltaColors.primary.opacity(DeltaColors.isDark ? 0.045 : 0.065))
+                .fill(DeltaColors.purple.opacity(DeltaColors.isDark ? 0.045 : 0.065))
                 .frame(width: 190, height: 190)
                 .blur(radius: 30)
                 .offset(x: 155 - (phase * 70), y: -40 + (phase * 150))
