@@ -181,7 +181,8 @@ struct DeltaParticleField: View {
                     let baseY = (cos(seed * 78.233) + 1) * 0.5
                     let speed = 0.16 + (seed.truncatingRemainder(dividingBy: 5) * 0.035)
                     let driftX = sin(time * speed + seed) * 0.075
-                    let driftY = cos(time * (speed * 0.82) + seed * 1.7) * 0.085
+                    let fallSpeed = 0.018 + (seed.truncatingRemainder(dividingBy: 4) * 0.006)
+                    let driftY = (baseY + (time * fallSpeed)).truncatingRemainder(dividingBy: 1)
                     let x = ((baseX + driftX + 1).truncatingRemainder(dividingBy: 1)) * size.width
                     let y = ((baseY + driftY + 1).truncatingRemainder(dividingBy: 1)) * size.height
                     let radius = 2.0 + (seed.truncatingRemainder(dividingBy: 4) * 0.75)
