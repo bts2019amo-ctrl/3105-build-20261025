@@ -216,8 +216,11 @@ final class PatchProjectStore: ObservableObject {
                     let hasCurrentPackage = mappedID.map { id in items.contains(where: { $0.id == id }) } ?? false
                     let category = PatchGameCategory(rawValue: patch.category)
                         ?? Self.inferredGameCategory(name: patch.name, fileName: patch.fileName)
-                    let feature = PatchFeatureCategory(rawValue: patch.feature)
-                        ?? Self.inferredFeatureCategory(name: patch.name, fileName: patch.fileName)
+                    let normalizedPatchName = patch.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                    let feature = normalizedPatchName.caseInsensitiveCompare("External") == .orderedSame
+                        ? .external
+                        : (PatchFeatureCategory(rawValue: patch.feature)
+                            ?? Self.inferredFeatureCategory(name: patch.name, fileName: patch.fileName))
                     guard let url = Self.remoteURL(for: patch.fileUrl) else { continue }
                     if hasCurrentPackage && patch.updatedAt <= PatchProjectLibrary.remoteVersion(for: patch.id) {
                         if let mappedID {

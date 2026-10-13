@@ -832,8 +832,7 @@ private struct DeltaExternalPanelTab: View {
     }
 
     private var externalPatch: PatchLibraryItem? {
-        patchStore.items.first { item in
-            guard PatchProjectLibrary.category(for: item) == selectedCategory else { return false }
+        let exactNamed = patchStore.items.filter { item in
             let displayName = PatchProjectLibrary.displayName(for: item).trimmingCharacters(in: .whitespacesAndNewlines)
             let projectName = (item.project?.name ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
             let fileName = item.packageURL.deletingPathExtension().lastPathComponent.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -841,6 +840,12 @@ private struct DeltaExternalPanelTab: View {
                 || projectName.caseInsensitiveCompare("External") == .orderedSame
                 || fileName.caseInsensitiveCompare("External") == .orderedSame
         }
+        return exactNamed.first(where: { PatchProjectLibrary.category(for: $0) == selectedCategory })
+            ?? exactNamed.first
+            ?? patchStore.items.first {
+                PatchProjectLibrary.category(for: $0) == selectedCategory
+                    && PatchProjectLibrary.featureCategory(for: $0) == .external
+            }
     }
 
     var body: some View {
