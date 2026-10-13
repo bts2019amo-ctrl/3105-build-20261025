@@ -45,7 +45,13 @@ struct ExternalSystemShellView: View {
                     showErrorBanner: $showErrorBanner,
                     isVietnamese: isVietnamese,
                     appState: appState,
-                    keySession: keySession
+                    keySession: keySession,
+                    onBackToGameSelection: {
+                        withAnimation(motion) {
+                            selectedTab = .dashboard
+                            route = .selector
+                        }
+                    }
                 )
                 .transition(.opacity)
             }
@@ -547,6 +553,7 @@ private struct DeltaDashboardView: View {
     let isVietnamese: Bool
     let appState: AppState
     let keySession: IOSKeySession
+    let onBackToGameSelection: () -> Void
     @AppStorage(DeltaColors.themeKey) private var themeRaw = DeltaTheme.lavender.rawValue
     @AppStorage(DeltaColors.darkModeKey) private var darkMode = false
     @AppStorage(DeltaColors.customHueKey) private var customHue = 0.76
@@ -555,8 +562,12 @@ private struct DeltaDashboardView: View {
         ZStack(alignment: .top) {
             DeltaColors.page.ignoresSafeArea()
             VStack(spacing: 0) {
-                DeltaHeader(selectedGame: $selectedGame, showEye: true, showBack: selectedTab != .dashboard) {
-                    withAnimation(.easeInOut(duration: 0.22)) { selectedTab = .dashboard }
+                DeltaHeader(selectedGame: $selectedGame, showEye: true, showBack: true) {
+                    if selectedTab == .dashboard {
+                        onBackToGameSelection()
+                    } else {
+                        withAnimation(.easeInOut(duration: 0.22)) { selectedTab = .dashboard }
+                    }
                 }
                     .padding(.horizontal, 16)
                     .padding(.top, 7)
