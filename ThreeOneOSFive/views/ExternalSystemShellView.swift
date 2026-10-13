@@ -263,6 +263,10 @@ enum DeltaColors {
     static var muted: Color { palette.muted }
     static var card: Color { palette.card }
     static var line: Color { palette.line }
+    static var isDark: Bool {
+        UserDefaults.standard.bool(forKey: darkModeKey)
+            || (DeltaTheme(rawValue: UserDefaults.standard.string(forKey: themeKey) ?? "") == .dark)
+    }
 }
 
 private struct DeltaSplashView: View {
