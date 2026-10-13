@@ -549,6 +549,7 @@ private struct DeltaDashboardView: View {
     let keySession: IOSKeySession
     @AppStorage(DeltaColors.themeKey) private var themeRaw = DeltaTheme.lavender.rawValue
     @AppStorage(DeltaColors.darkModeKey) private var darkMode = false
+    @AppStorage(DeltaColors.customHueKey) private var customHue = 0.76
 
     var body: some View {
         ZStack(alignment: .top) {
@@ -579,7 +580,7 @@ private struct DeltaDashboardView: View {
                     .transition(.opacity.combined(with: .move(edge: .trailing)))
                 }
             }
-            .id("dashboard-theme-\(themeRaw)-\(darkMode)")
+            .id("dashboard-theme-\(themeRaw)-\(darkMode)-\(customHue)")
             if showErrorBanner {
                 DeltaErrorBanner {
                     withAnimation(.easeOut(duration: 0.2)) { showErrorBanner = false }
@@ -632,7 +633,7 @@ private struct DeltaHeader: View {
             }
             .padding(2)
             .background(DeltaColors.card, in: Capsule())
-            .shadow(color: DeltaColors.purple.opacity(0.10), radius: 8, y: 3)
+            .shadow(color: DeltaColors.purple.opacity(0.48), radius: 13, y: 3)
             if showEye {
                 Image(systemName: "eye.fill")
                     .font(.caption.weight(.bold))
@@ -789,7 +790,7 @@ private struct DeltaCategoryCard: View {
                 RoundedRectangle(cornerRadius: 15, style: .continuous)
                     .stroke(isSelected ? DeltaColors.purple.opacity(0.48) : DeltaColors.purple.opacity(0.08), lineWidth: 1)
             }
-            .shadow(color: isSelected ? DeltaColors.purple.opacity(0.18) : .black.opacity(0.04), radius: 8, y: 3)
+            .shadow(color: isSelected ? DeltaColors.purple.opacity(0.78) : DeltaColors.purple.opacity(0.18), radius: isSelected ? 15 : 8, y: 3)
         }
         .buttonStyle(.plain)
     }
@@ -1330,8 +1331,8 @@ private struct DeltaCard<Content: View>: View {
         VStack(alignment: .leading, spacing: 9) { content }
             .padding(12)
             .background(DeltaColors.card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(DeltaColors.line, lineWidth: 1))
-            .shadow(color: DeltaColors.purple.opacity(0.06), radius: 8, y: 4)
+            .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(DeltaColors.line, lineWidth: 1.2))
+            .shadow(color: DeltaColors.purple.opacity(0.34), radius: 16, y: 5)
     }
 }
 
@@ -1339,12 +1340,12 @@ private struct DeltaSectionTitle: View {
     let title: String
     let icon: String
     init(_ title: String, icon: String) { self.title = title; self.icon = icon }
-    var body: some View { Label(title, systemImage: icon).font(.system(size: 9, weight: .black)).tracking(0.7).foregroundStyle(DeltaColors.purple) }
+    var body: some View { Label(title, systemImage: icon).font(.system(size: 9, weight: .black)).tracking(0.7).foregroundStyle(DeltaColors.purple).shadow(color: DeltaColors.purple.opacity(0.85), radius: 7) }
 }
 
 private struct DeltaStatusBadge: View {
     let text: String
-    var body: some View { HStack(spacing: 4) { Circle().fill(Color.green).frame(width: 5, height: 5); Text(text).font(.system(size: 8, weight: .bold)) }.foregroundStyle(Color(red: 0.05, green: 0.60, blue: 0.40)).padding(.horizontal, 7).padding(.vertical, 4).background(Color.green.opacity(0.12), in: Capsule()) }
+    var body: some View { HStack(spacing: 4) { Circle().fill(Color.green).frame(width: 5, height: 5); Text(text).font(.system(size: 8, weight: .bold)) }.foregroundStyle(Color(red: 0.05, green: 0.60, blue: 0.40)).padding(.horizontal, 7).padding(.vertical, 4).background(Color.green.opacity(0.16), in: Capsule()).shadow(color: Color.green.opacity(0.70), radius: 10) }
 }
 
 private struct DeltaMetric: View {
@@ -1352,11 +1353,11 @@ private struct DeltaMetric: View {
     let subtitle: String
     let icon: String
     init(_ title: String, subtitle: String, icon: String) { self.title = title; self.subtitle = subtitle; self.icon = icon }
-    var body: some View { VStack(alignment: .leading, spacing: 3) { Image(systemName: icon).font(.caption2).foregroundStyle(DeltaColors.purple); Text(title).font(.caption2.weight(.bold)).foregroundStyle(DeltaColors.ink); Text(subtitle).font(.system(size: 8)).foregroundStyle(DeltaColors.muted) }.frame(maxWidth: .infinity, alignment: .leading).padding(8).background(DeltaColors.card, in: RoundedRectangle(cornerRadius: 7)) }
+    var body: some View { VStack(alignment: .leading, spacing: 3) { Image(systemName: icon).font(.caption2).foregroundStyle(DeltaColors.purple); Text(title).font(.caption2.weight(.bold)).foregroundStyle(DeltaColors.ink); Text(subtitle).font(.system(size: 8)).foregroundStyle(DeltaColors.muted) }.frame(maxWidth: .infinity, alignment: .leading).padding(8).background(DeltaColors.card, in: RoundedRectangle(cornerRadius: 7)).shadow(color: DeltaColors.purple.opacity(0.28), radius: 10) }
 }
 
 private struct DeltaToggleStyle: ToggleStyle {
-    func makeBody(configuration: Configuration) -> some View { RoundedRectangle(cornerRadius: 12).fill(configuration.isOn ? DeltaColors.purple : Color.gray.opacity(0.45)).frame(width: 37, height: 23).overlay(alignment: configuration.isOn ? .trailing : .leading) { Circle().fill(.white).frame(width: 18, height: 18).padding(2) }.animation(.spring(response: 0.24, dampingFraction: 0.8), value: configuration.isOn).onTapGesture { configuration.isOn.toggle() }
+    func makeBody(configuration: Configuration) -> some View { RoundedRectangle(cornerRadius: 12).fill(configuration.isOn ? DeltaColors.purple : Color.gray.opacity(0.45)).frame(width: 37, height: 23).shadow(color: configuration.isOn ? DeltaColors.purple.opacity(0.85) : .clear, radius: 9).overlay(alignment: configuration.isOn ? .trailing : .leading) { Circle().fill(.white).frame(width: 18, height: 18).padding(2) }.animation(.spring(response: 0.24, dampingFraction: 0.8), value: configuration.isOn).onTapGesture { configuration.isOn.toggle() }
     }
 }
 
@@ -1394,7 +1395,7 @@ private struct DeltaInfoRow: View {
     let label: String
     let value: String
     init(_ label: String, value: String) { self.label = label; self.value = value }
-    var body: some View { HStack { Text(label).font(.caption).foregroundStyle(DeltaColors.muted); Spacer(); Text(value).font(.caption.weight(.bold)).foregroundStyle(DeltaColors.ink) } }
+    var body: some View { HStack { Text(label).font(.caption).foregroundStyle(DeltaColors.muted).shadow(color: DeltaColors.purple.opacity(0.35), radius: 4); Spacer(); Text(value).font(.caption.weight(.bold)).foregroundStyle(DeltaColors.ink).shadow(color: DeltaColors.purple.opacity(0.35), radius: 4) } }
 }
 
 private struct DeltaLanguageButton: View {
@@ -1408,7 +1409,7 @@ private struct DeltaActionRow: View {
     let icon: String
     let title: String
     let color: Color
-    var body: some View { HStack(spacing: 8) { Image(systemName: icon).foregroundStyle(color).frame(width: 20); Text(title).font(.caption.weight(.semibold)).foregroundStyle(color); Spacer(); Image(systemName: "arrow.up.right").font(.caption2.bold()).foregroundStyle(color) }.padding(.vertical, 7) }
+    var body: some View { HStack(spacing: 8) { Image(systemName: icon).foregroundStyle(color).frame(width: 20).shadow(color: color.opacity(0.90), radius: 8); Text(title).font(.caption.weight(.semibold)).foregroundStyle(color).shadow(color: color.opacity(0.65), radius: 6); Spacer(); Image(systemName: "arrow.up.right").font(.caption2.bold()).foregroundStyle(color).shadow(color: color.opacity(0.80), radius: 7) }.padding(.vertical, 7) }
 }
 
 private struct DeltaErrorBanner: View {

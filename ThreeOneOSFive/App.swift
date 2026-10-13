@@ -655,7 +655,7 @@ struct IOSKeyLoginView: View {
                             RoundedRectangle(cornerRadius: 18, style: .continuous)
                                 .stroke(DeltaColors.purple.opacity(0.20), lineWidth: 1)
                         }
-                        .shadow(color: DeltaColors.purple.opacity(0.10), radius: 12, y: 5)
+                        .shadow(color: DeltaColors.purple.opacity(0.58), radius: 18, y: 5)
 
                         Button {
                             withAnimation(.spring(response: 0.24, dampingFraction: 0.76)) { pressed = true }
@@ -682,7 +682,7 @@ struct IOSKeyLoginView: View {
                             RoundedRectangle(cornerRadius: 18, style: .continuous)
                                 .stroke(DeltaColors.purple.opacity(0.24), lineWidth: 1)
                         }
-                        .shadow(color: DeltaColors.purple.opacity(0.10), radius: 10, y: 5)
+                        .shadow(color: DeltaColors.purple.opacity(0.62), radius: 18, y: 5)
                         .scaleEffect(pressed ? 0.97 : 1)
                         .disabled(session.isChecking)
 
@@ -721,7 +721,7 @@ struct IOSKeyLoginView: View {
                         RoundedRectangle(cornerRadius: 26, style: .continuous)
                             .stroke(DeltaColors.line, lineWidth: 1)
                     }
-                    .shadow(color: DeltaColors.purple.opacity(0.12), radius: 22, y: 10)
+                    .shadow(color: DeltaColors.purple.opacity(0.48), radius: 30, y: 10)
                     .padding(.top, 36)
                     .padding(.horizontal, 28)
                     .offset(y: appeared ? 0 : 18)
