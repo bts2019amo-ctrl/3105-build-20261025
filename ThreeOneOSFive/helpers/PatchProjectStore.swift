@@ -239,39 +239,47 @@ final class PatchProjectStore: ObservableObject {
                         packageRequest,
                         session: networkSession
                     )
+                    let downloadedData = packageData
                     let checksum = await Task.detached(priority: .utility) {
-                        Self.sha256Hex(packageData)
+                        Self.sha256Hex(downloadedData)
                     }.value
                     guard let packageResponse = packageResponse as? HTTPURLResponse,
                           (200..<300).contains(packageResponse.statusCode),
                           checksum == patch.checksumSha256.lowercased() else { continue }
+                    let inspectedData = packageData
                     var summary = try await Task.detached(priority: .utility) {
-                        try PatchPackageCodec.inspect(packageData)
+                        try PatchPackageCodec.inspect(inspectedData)
                     }.value
                     var existingURL = items.first(where: { $0.id == mappedID })?.packageURL
                     if (mappedID == nil || (mappedID != nil && claimedPackageIDs.contains(mappedID!)))
                         && reservedPackageIDs.contains(summary.packageID) {
+                        let dataToDecode = packageData
                         let decoded = try await Task.detached(priority: .utility) {
-                            try PatchPackageCodec.decode(packageData, password: nil)
+                            try PatchPackageCodec.decode(dataToDecode, password: nil)
                         }.value
                         let newID = UUID()
+                        let dataToReidentify = packageData
                         packageData = try await Task.detached(priority: .utility) {
                             try PatchPackageCodec.reidentifyPublicPackage(
-                                packageData,
+                                dataToReidentify,
                                 decoded: decoded,
                                 newID: newID
                             )
                         }.value
+                        let reidentifiedData = packageData
                         summary = try await Task.detached(priority: .utility) {
-                            try PatchPackageCodec.inspect(packageData)
+                            try PatchPackageCodec.inspect(reidentifiedData)
                         }.value
                         existingURL = nil
                     }
+                    let dataToPersist = packageData
+                    let summaryToPersist = summary
+                    let urlToPersist = existingURL
                     let pendingUnlock = try await Task.detached(priority: .utility) {
                         try Self.persistImportedPackage(
-                            data: packageData,
-                            summary: summary,
-                            existingURL: existingURL,
+                            data: dataToPersist,
+                            summary: summaryToPersist,
+                            existingURL: urlToPersist,
                             category: category,
                             feature: feature,
                             remoteID: patch.id,
@@ -280,14 +288,17 @@ final class PatchProjectStore: ObservableObject {
                         )
                     }.value
                     if pendingUnlock != nil {
+                        let dataToSave = packageData
+                        let urlToSave = existingURL
+                        let summaryToSave = summary
                         try await Task.detached(priority: .utility) {
                             _ = try PatchProjectLibrary.save(
-                                data: packageData,
+                                data: dataToSave,
                                 projectName: patch.name,
-                                existingURL: existingURL
+                                existingURL: urlToSave
                             )
-                            PatchProjectLibrary.setCategory(category, for: summary.packageID)
-                            PatchProjectLibrary.setFeatureCategory(feature, for: summary.packageID)
+                            PatchProjectLibrary.setCategory(category, for: summaryToSave.packageID)
+                            PatchProjectLibrary.setFeatureCategory(feature, for: summaryToSave.packageID)
                         }.value
                     }
                     PatchProjectLibrary.setRemotePackageID(summary.packageID, for: patch.id)
