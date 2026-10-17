@@ -256,7 +256,8 @@ final class PatchProjectStore: ObservableObject {
                         try PatchPackageCodec.inspect(inspectedData)
                     }.value
                     var existingURL = items.first(where: { $0.id == mappedID })?.packageURL
-                    if (mappedID == nil || (mappedID != nil && claimedPackageIDs.contains(mappedID!)))
+                    if !summary.isPasswordProtected,
+                       (mappedID == nil || (mappedID != nil && claimedPackageIDs.contains(mappedID!)))
                         && reservedPackageIDs.contains(summary.packageID) {
                         let dataToDecode = packageData
                         let decoded = try await Task.detached(priority: .utility) {
@@ -280,19 +281,40 @@ final class PatchProjectStore: ObservableObject {
                     let dataToPersist = packageData
                     let summaryToPersist = summary
                     let urlToPersist = existingURL
-                    let pendingUnlock = try await Task.detached(priority: .utility) {
-                        try Self.persistImportedPackage(
-                            data: dataToPersist,
-                            summary: summaryToPersist,
-                            existingURL: urlToPersist,
-                            password: patch.password,
-                            category: category,
-                            feature: feature,
-                            remoteID: patch.id,
-                            remoteVersion: patch.updatedAt,
-                            remoteName: patch.name
-                        )
-                    }.value
+                    let pendingUnlock: PendingUnlock?
+                    do {
+                        pendingUnlock = try await Task.detached(priority: .utility) {
+                            try Self.persistImportedPackage(
+                                data: dataToPersist,
+                                summary: summaryToPersist,
+                                existingURL: urlToPersist,
+                                password: patch.password,
+                                category: category,
+                                feature: feature,
+                                remoteID: patch.id,
+                                remoteVersion: patch.updatedAt,
+                                remoteName: patch.name
+                            )
+                        }.value
+                    } catch {
+                        // Never hide a protected remote patch because the stored password
+                        // is stale, mistyped, or incompatible with this package revision.
+                        // Keep it locally and present the normal unlock prompt instead.
+                        guard summaryToPersist.isPasswordProtected else { throw error }
+                        pendingUnlock = try await Task.detached(priority: .utility) {
+                            try Self.persistImportedPackage(
+                                data: dataToPersist,
+                                summary: summaryToPersist,
+                                existingURL: urlToPersist,
+                                password: nil,
+                                category: category,
+                                feature: feature,
+                                remoteID: patch.id,
+                                remoteVersion: patch.updatedAt,
+                                remoteName: patch.name
+                            )
+                        }.value
+                    }
                     if pendingUnlock != nil {
                         let dataToSave = packageData
                         let urlToSave = existingURL
