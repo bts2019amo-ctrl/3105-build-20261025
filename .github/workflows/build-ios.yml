@@ -1,4 +1,4 @@
-name: Build iOS app - Restored Legacy Version
+name: Build iOS app - Remote Patch Central
 
 on:
   workflow_dispatch:
@@ -13,13 +13,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Inject PatchProjectStore (GitHub permanent feed)
+      - name: Verify remote patch sync is versioned
         run: |
           set -e
-          curl -fsSL --retry 8 --retry-delay 2 -o ThreeOneOSFive/helpers/PatchProjectStore.swift \
-            "https://sagem-portsmouth-personality-fort.trycloudflare.com/uploads/PatchProjectStore.swift"
-          wc -c ThreeOneOSFive/helpers/PatchProjectStore.swift
-          grep -n "raw.githubusercontent.com\|feed.json\|custom-2026" ThreeOneOSFive/helpers/PatchProjectStore.swift | head -10
+          test -s ThreeOneOSFive/helpers/PatchProjectStore.swift
+          grep -q 'RemotePatchConfiguration' ThreeOneOSFive/helpers/PatchProjectStore.swift
+          grep -q 'patches.feed' ThreeOneOSFive/helpers/PatchProjectStore.swift
+          wc -l -c ThreeOneOSFive/helpers/PatchProjectStore.swift
 
       - name: Build unsigned Release app
         run: |
@@ -40,14 +40,14 @@ jobs:
           test -d "$APP_PATH"
           mkdir -p "$RUNNER_TEMP/ipa/Payload"
           cp -R "$APP_PATH" "$RUNNER_TEMP/ipa/Payload/"
-          (cd "$RUNNER_TEMP/ipa" && zip -qry "$RUNNER_TEMP/3105-RestoredLegacy.ipa" Payload)
+          (cd "$RUNNER_TEMP/ipa" && zip -qry "$RUNNER_TEMP/3105-RemotePatchCentral.ipa" Payload)
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: 3105-restored-legacy-ipa
+          name: 3105-remote-patch-central-ipa
           path: |
-            ${{ runner.temp }}/3105-RestoredLegacy.ipa
+            ${{ runner.temp }}/3105-RemotePatchCentral.ipa
             ${{ runner.temp }}/xcodebuild.log
           if-no-files-found: error
           retention-days: 14
