@@ -60,7 +60,7 @@ struct RemoteAppConfig: Codable {
     private static let cacheKey = "remote.app.config.v1"
     private static let url = URL(string: "https://systemstore-9su6ubez.manus.space/api/app-config.json")!
     init() {
-        if let data = UserDefaults.standard.data(forKey: Self.cacheKey), let cached = try? JSONDecoder().decode(RemoteAppConfig.self, from: data) { config = cached; applyTheme(cached.theme) }
+        if let data = UserDefaults.standard.data(forKey: Self.cacheKey), let cached = try? JSONDecoder().decode(RemoteAppConfig.self, from: data) { config = cached; apply(cached) }
     }
     func start() {
         guard task == nil else { return }
@@ -72,13 +72,15 @@ struct RemoteAppConfig: Codable {
     func refresh() async {
         var request = URLRequest(url: Self.url); request.cachePolicy = .reloadIgnoringLocalCacheData; request.timeoutInterval = 12
         guard let (data, response) = try? await URLSession.shared.data(for: request), let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode), let value = try? JSONDecoder().decode(RemoteAppConfig.self, from: data) else { return }
-        config = value; UserDefaults.standard.set(data, forKey: Self.cacheKey); applyTheme(value.theme)
+        config = value; UserDefaults.standard.set(data, forKey: Self.cacheKey); apply(value)
     }
     func text(_ key: String, fallback: String) -> String { config.texts[key] ?? fallback }
-    private func applyTheme(_ theme: RemoteAppConfig.RemoteTheme) {
-        UserDefaults.standard.set(theme.mode, forKey: "externalSystem.theme")
-        UserDefaults.standard.set(theme.darkMode, forKey: "externalSystem.darkMode")
-        if let hue = theme.hue { UserDefaults.standard.set(hue, forKey: "externalSystem.customHue") }
+    private func apply(_ value: RemoteAppConfig) {
+        UserDefaults.standard.set(value.theme.mode, forKey: "externalSystem.theme")
+        UserDefaults.standard.set(value.theme.darkMode, forKey: "externalSystem.darkMode")
+        if let hue = value.theme.hue { UserDefaults.standard.set(hue, forKey: "externalSystem.customHue") }
+        UserDefaults.standard.set(value.texts, forKey: "remote.app.texts")
+        if let logoUrl = value.logoUrl { UserDefaults.standard.set(logoUrl, forKey: "remote.app.logo.url") }
     }
 }
 

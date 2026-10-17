@@ -19,7 +19,8 @@ enum AppLanguage: String, CaseIterable, Identifiable {
     }
 
     func text(_ key: String) -> String {
-        localizedBundle.localizedString(forKey: key, value: key, table: nil)
+        let overrides = UserDefaults.standard.dictionary(forKey: "remote.app.texts") as? [String: String]
+        return overrides?[key] ?? localizedBundle.localizedString(forKey: key, value: key, table: nil)
     }
 
     func text(_ key: String, _ arguments: CVarArg...) -> String {

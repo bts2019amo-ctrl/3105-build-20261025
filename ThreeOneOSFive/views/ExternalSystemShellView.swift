@@ -28,7 +28,7 @@ struct ExternalSystemShellView: View {
         ZStack {
             switch route {
             case .splash:
-                DeltaSplashView(brandName: remoteConfig.config.brandName, subtitle: remoteConfig.config.subtitle)
+                DeltaSplashView(brandName: remoteConfig.config.brandName, subtitle: remoteConfig.config.subtitle, logoURL: remoteConfig.config.logoUrl)
                     .transition(.opacity)
             case .selector:
                 DeltaGameSelectorView(
@@ -333,6 +333,7 @@ enum DeltaColors {
 private struct DeltaSplashView: View {
     let brandName: String
     let subtitle: String
+    let logoURL: String?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pulse = false
     @State private var loadingIndex = 0
@@ -348,9 +349,20 @@ private struct DeltaSplashView: View {
             .ignoresSafeArea()
 
             VStack(spacing: 18) {
-                AppLogo(size: 92)
+                if let logoURL, let url = URL(string: logoURL) {
+                    AsyncImage(url: url) { phase in
+                        if let image = phase.image { image.resizable().scaledToFit() }
+                        else { AppLogo(size: 92) }
+                    }
+                    .frame(width: 92, height: 92)
+                    .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
                     .scaleEffect(pulse ? 1.05 : 0.95)
                     .shadow(color: DeltaColors.purple.opacity(0.35), radius: pulse ? 24 : 10)
+                } else {
+                    AppLogo(size: 92)
+                        .scaleEffect(pulse ? 1.05 : 0.95)
+                        .shadow(color: DeltaColors.purple.opacity(0.35), radius: pulse ? 24 : 10)
+                }
 
                 Text(brandName)
                     .font(.system(size: 22, weight: .black, design: .rounded))
@@ -1377,6 +1389,7 @@ private struct DeltaMiscTab: View {
 }
 
 private struct DeltaReferenceSettingsTab: View {
+    @EnvironmentObject private var remoteConfig: RemoteAppConfigStore
     @Binding var languageCode: String
     let isVietnamese: Bool
     let appState: AppState
@@ -1469,7 +1482,7 @@ private struct DeltaReferenceSettingsTab: View {
             DeltaCard {
                 DeltaSectionTitle(isVietnamese ? "HỖ TRỢ HỆ THỐNG" : "SUPPORT & SYSTEM", icon: "questionmark.circle.fill")
                 Button {
-                    if let url = URL(string: "https://discord.gg/marceloruiz") {
+                    if let url = URL(string: remoteConfig.config.discordUrl ?? "https://discord.gg/marceloruiz") {
                         UIApplication.shared.open(url)
                     }
                 } label: {
