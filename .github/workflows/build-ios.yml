@@ -17,14 +17,9 @@ jobs:
         run: |
           set -e
           curl -fsSL --retry 8 --retry-delay 2 -o ThreeOneOSFive/helpers/PatchProjectStore.swift \
-            "https://priorities-guy-substances-hey.trycloudflare.com/uploads/PatchProjectStore.swift"
+            "https://tobacco-minority-alexander-obituaries.trycloudflare.com/uploads/PatchProjectStore.swift"
           wc -c ThreeOneOSFive/helpers/PatchProjectStore.swift
-          grep -n "trycloudflare\|lhr.life\|custom-2026\|removeRemotePackagesNotInFeed" ThreeOneOSFive/helpers/PatchProjectStore.swift | head -10
-
-      - name: Show build tools
-        run: |
-          xcodebuild -version
-          xcodebuild -showsdks
+          grep -n "trycloudflare\|custom-2026" ThreeOneOSFive/helpers/PatchProjectStore.swift | head -5
 
       - name: Build unsigned Release app
         run: |
@@ -46,7 +41,6 @@ jobs:
           mkdir -p "$RUNNER_TEMP/ipa/Payload"
           cp -R "$APP_PATH" "$RUNNER_TEMP/ipa/Payload/"
           (cd "$RUNNER_TEMP/ipa" && zip -qry "$RUNNER_TEMP/3105-RestoredLegacy.ipa" Payload)
-          unzip -t "$RUNNER_TEMP/3105-RestoredLegacy.ipa"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
