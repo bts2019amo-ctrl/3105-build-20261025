@@ -231,6 +231,7 @@ final class PatchProjectStore: ObservableObject {
                         if let mappedID {
                             PatchProjectLibrary.setCategory(category, for: mappedID)
                             PatchProjectLibrary.setFeatureCategory(feature, for: mappedID)
+                            PatchProjectLibrary.setFeatureIdentifier(patch.feature, for: mappedID)
                         }
                         continue
                     }
@@ -304,11 +305,13 @@ final class PatchProjectStore: ObservableObject {
                             )
                             PatchProjectLibrary.setCategory(category, for: summaryToSave.packageID)
                             PatchProjectLibrary.setFeatureCategory(feature, for: summaryToSave.packageID)
+                            PatchProjectLibrary.setFeatureIdentifier(patch.feature, for: summaryToSave.packageID)
                         }.value
                     }
                     PatchProjectLibrary.setRemotePackageID(summary.packageID, for: patch.id)
                     PatchProjectLibrary.setRemoteVersion(patch.updatedAt, for: patch.id)
                     PatchProjectLibrary.setDisplayName(patch.name, for: summary.packageID)
+                    PatchProjectLibrary.setFeatureIdentifier(patch.feature, for: summary.packageID)
                     PatchProjectLibrary.setRemoteIconURL(patch.iconUrl, for: summary.packageID)
                     PatchProjectLibrary.setRemoteMetadata(
                         version: patch.version,

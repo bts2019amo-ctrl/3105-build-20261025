@@ -54,6 +54,7 @@ struct ExternalSystemShellView: View {
                         }
                     }
                 )
+                .environmentObject(remoteConfig)
                 .transition(.opacity)
             }
 
@@ -104,6 +105,7 @@ struct ExternalSystemShellView: View {
             }
         }
         .background(DeltaColors.page.ignoresSafeArea())
+        .environmentObject(remoteConfig)
         .overlay(Color.clear.frame(width: 0, height: 0).id("shell-theme-\(themeRaw)-\(darkMode)-\(customHue)"))
         .preferredColorScheme(darkMode ? .dark : .light)
         .animation(motion, value: route)
@@ -215,7 +217,7 @@ private struct DeltaColorWheel: View {
 
 private enum DeltaRoute: Equatable { case splash, selector, dashboard }
 private enum DeltaGame: String, CaseIterable { case freeFire, freeFireMax }
-private enum DeltaTab: String, CaseIterable { case dashboard, cache, avatar, hologram, external, skin, settings
+private enum DeltaTab: Hashable { case dashboard, cache, avatar, hologram, external, skin, settings, custom(String)
     var title: String {
         switch self {
         case .dashboard: return "Dashboard"
@@ -225,6 +227,7 @@ private enum DeltaTab: String, CaseIterable { case dashboard, cache, avatar, hol
         case .external: return "External"
         case .skin: return "Skin"
         case .settings: return "Settings"
+        case .custom(let identifier): return identifier
         }
     }
     var vietnameseTitle: String {
@@ -236,6 +239,7 @@ private enum DeltaTab: String, CaseIterable { case dashboard, cache, avatar, hol
         case .external: return "External"
         case .skin: return "Skin"
         case .settings: return "Cài đặt"
+        case .custom(let identifier): return identifier
         }
     }
     var icon: String {
@@ -247,6 +251,7 @@ private enum DeltaTab: String, CaseIterable { case dashboard, cache, avatar, hol
         case .external: return "scope"
         case .skin: return "tshirt.fill"
         case .settings: return "gearshape.fill"
+        case .custom: return "square.grid.2x2.fill"
         }
     }
 }
@@ -607,6 +612,7 @@ private struct DeltaDashboardView: View {
                         case .external: DeltaExternalPanelTab(selectedGame: selectedGame)
                         case .skin: DeltaRemoteFeatureTab(feature: .skin, selectedGame: selectedGame)
                         case .settings: DeltaReferenceSettingsTab(languageCode: $languageCode, isVietnamese: isVietnamese, appState: appState, keySession: keySession)
+                        case .custom(let identifier): DeltaRemoteCustomFeatureTab(identifier: identifier, selectedGame: selectedGame)
                         }
                     }
                     .padding(.horizontal, 16)
@@ -632,6 +638,7 @@ private struct DeltaDashboardView: View {
 }
 
 private struct DeltaHeader: View {
+    @EnvironmentObject private var remoteConfig: RemoteAppConfigStore
     @Binding var selectedGame: DeltaGame
     let showEye: Bool
     let showBack: Bool
@@ -650,7 +657,7 @@ private struct DeltaHeader: View {
                 .buttonStyle(.plain)
             }
             AppLogo(size: 29)
-            Text("EXTERNAL SYSTEM")
+            Text(remoteConfig.config.brandName)
                 .font(.system(size: 15, weight: .black, design: .rounded))
                 .tracking(0.7)
                 .foregroundStyle(DeltaColors.ink)
@@ -684,21 +691,66 @@ private struct DeltaHeader: View {
 
 private struct DeltaTabBar: View {
     @EnvironmentObject private var patchStore: PatchProjectStore
+    @EnvironmentObject private var remoteConfig: RemoteAppConfigStore
     @Binding var selectedTab: DeltaTab
     let selectedGame: DeltaGame
     let isVietnamese: Bool
 
-    private let patchTabs: [DeltaTab] = [.cache, .avatar, .hologram, .external, .skin]
+    private let fallbackPatchTabs: [DeltaTab] = [.cache, .avatar, .hologram, .external, .skin]
+
+    private var patchTabs: [DeltaTab] {
+        let configured = remoteConfig.config.categories
+            .filter { $0.visible }
+            .sorted { $0.order < $1.order }
+            .map { tab(for: $0.id) }
+        return configured.isEmpty ? fallbackPatchTabs : configured
+    }
+
+    private func tab(for identifier: String) -> DeltaTab {
+        switch identifier.lowercased() {
+        case "cache": return .cache
+        case "avatar": return .avatar
+        case "hologram": return .hologram
+        case "external": return .external
+        case "skin": return .skin
+        default: return .custom(identifier.lowercased())
+        }
+    }
+
+    private func config(for tab: DeltaTab) -> RemoteAppCategory? {
+        let identifier: String
+        switch tab {
+        case .cache: identifier = "cache"
+        case .avatar: identifier = "avatar"
+        case .hologram: identifier = "hologram"
+        case .external: identifier = "external"
+        case .skin: identifier = "skin"
+        case .custom(let value): identifier = value
+        default: return nil
+        }
+        return remoteConfig.config.categories.first { $0.id.lowercased() == identifier }
+    }
+
+    private func title(for tab: DeltaTab) -> String { config(for: tab)?.title ?? tab.title }
 
     private var selectedCategory: PatchGameCategory {
         selectedGame == .freeFire ? .normal : .max
     }
 
     private func patchCount(for tab: DeltaTab) -> Int {
-        guard let feature = PatchFeatureCategory(rawValue: tab.rawValue) else { return 0 }
+        let identifier: String
+        switch tab {
+        case .cache: identifier = "cache"
+        case .avatar: identifier = "avatar"
+        case .hologram: identifier = "hologram"
+        case .external: identifier = "external"
+        case .skin: identifier = "skin"
+        case .custom(let value): identifier = value
+        default: return 0
+        }
         return patchStore.items.filter {
             PatchProjectLibrary.category(for: $0) == selectedCategory &&
-            PatchProjectLibrary.featureCategory(for: $0) == feature
+            PatchProjectLibrary.featureIdentifier(for: $0) == identifier
         }.count
     }
 
@@ -724,32 +776,26 @@ private struct DeltaTabBar: View {
             }
 
             HStack(spacing: 8) {
-                DeltaCompactTabButton(tab: .dashboard, selectedTab: selectedTab, title: isVietnamese ? DeltaTab.dashboard.vietnameseTitle : DeltaTab.dashboard.title) {
-                    select(.dashboard)
+                if remoteConfig.config.tabs.first(where: { $0.id == "dashboard" })?.visible ?? true {
+                    DeltaCompactTabButton(tab: .dashboard, selectedTab: selectedTab, title: remoteConfig.config.tabs.first { $0.id == "dashboard" }?.title ?? (isVietnamese ? DeltaTab.dashboard.vietnameseTitle : DeltaTab.dashboard.title)) {
+                        select(.dashboard)
+                    }
                 }
-                DeltaCompactTabButton(tab: .settings, selectedTab: selectedTab, title: isVietnamese ? DeltaTab.settings.vietnameseTitle : DeltaTab.settings.title) {
-                    select(.settings)
+                if remoteConfig.config.tabs.first(where: { $0.id == "settings" })?.visible ?? true {
+                    DeltaCompactTabButton(tab: .settings, selectedTab: selectedTab, title: remoteConfig.config.tabs.first { $0.id == "settings" }?.title ?? (isVietnamese ? DeltaTab.settings.vietnameseTitle : DeltaTab.settings.title)) {
+                        select(.settings)
+                    }
                 }
             }
             LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
-                ForEach(patchTabs.prefix(4), id: \.self) { tab in
+                ForEach(patchTabs, id: \.self) { tab in
                     DeltaCategoryCard(
                         tab: tab,
-                        title: isVietnamese ? tab.vietnameseTitle : tab.title,
+                        title: title(for: tab),
                         count: patchCount(for: tab),
                         isSelected: selectedTab == tab,
                         action: { select(tab) }
                     )
-                }
-                if let skin = patchTabs.last {
-                    DeltaCategoryCard(
-                        tab: skin,
-                        title: isVietnamese ? skin.vietnameseTitle : skin.title,
-                        count: patchCount(for: skin),
-                        isSelected: selectedTab == skin,
-                        action: { select(skin) }
-                    )
-                    .gridCellColumns(2)
                 }
             }
         }
@@ -1143,6 +1189,83 @@ private struct DeltaRemoteFeatureTab: View {
                                 }
                                 .buttonStyle(.plain)
                                 .disabled(patchStore.isBusy)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+private struct DeltaRemoteCustomFeatureTab: View {
+    @EnvironmentObject private var patchStore: PatchProjectStore
+    @EnvironmentObject private var remoteConfig: RemoteAppConfigStore
+    let identifier: String
+    let selectedGame: DeltaGame
+    @State private var expandedItemID: UUID?
+
+    private var metadata: RemoteAppCategory? {
+        remoteConfig.config.categories.first { $0.id.lowercased() == identifier.lowercased() }
+    }
+    private var items: [PatchLibraryItem] {
+        let game: PatchGameCategory = selectedGame == .freeFire ? .normal : .max
+        return patchStore.items.filter {
+            PatchProjectLibrary.category(for: $0) == game &&
+            PatchProjectLibrary.featureIdentifier(for: $0) == identifier.lowercased()
+        }
+    }
+    private var title: String { metadata?.title ?? identifier.capitalized }
+    private var icon: String { metadata?.icon.isEmpty == false ? metadata!.icon : "square.grid.2x2.fill" }
+
+    var body: some View {
+        VStack(spacing: 12) {
+            DeltaCard {
+                DeltaSectionTitle("\(title.uppercased()) PATCHES", icon: icon)
+                Text("Toque no patch para expandir. Depois você pode aplicar ou restaurar o original.")
+                    .font(.caption)
+                    .foregroundStyle(DeltaColors.muted)
+            }
+            if items.isEmpty {
+                DeltaCard {
+                    VStack(spacing: 10) {
+                        Image(systemName: icon).font(.system(size: 28, weight: .light)).foregroundStyle(DeltaColors.purple)
+                        Text("Nenhum patch nesta categoria ainda").font(.subheadline.weight(.semibold)).foregroundStyle(DeltaColors.ink)
+                    }.frame(maxWidth: .infinity).padding(.vertical, 22)
+                }
+            } else {
+                ForEach(items) { item in
+                    let applied = DevicePatchService.latestReceipt(projectID: item.id) != nil
+                    DeltaCard {
+                        Button {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.82)) { expandedItemID = expandedItemID == item.id ? nil : item.id }
+                        } label: {
+                            HStack(spacing: 10) {
+                                if let iconURL = PatchProjectLibrary.remoteIconURL(for: item.id) {
+                                    AsyncImage(url: iconURL) { phase in
+                                        if let image = phase.image { image.resizable().scaledToFit().padding(7) }
+                                        else { Image(systemName: icon).resizable().scaledToFit().padding(15).foregroundStyle(DeltaColors.purple) }
+                                    }.frame(width: 58, height: 58).background(DeltaColors.purple.opacity(0.10), in: RoundedRectangle(cornerRadius: 12, style: .continuous)).clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                } else {
+                                    Image(systemName: icon).font(.title3).foregroundStyle(DeltaColors.purple).frame(width: 42, height: 42).background(DeltaColors.purple.opacity(0.10), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                                }
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(PatchProjectLibrary.displayName(for: item)).font(.subheadline.weight(.bold)).foregroundStyle(DeltaColors.ink).lineLimit(1)
+                                    Text(applied ? "Applied — tap to restore" : item.isLocked ? "Protected — tap to unlock" : "Tap to configure").font(.caption2).foregroundStyle(DeltaColors.muted)
+                                }
+                                Spacer()
+                                Image(systemName: expandedItemID == item.id ? "chevron.up.circle.fill" : "chevron.down.circle").foregroundStyle(DeltaColors.purple)
+                            }
+                        }.buttonStyle(.plain)
+                        if expandedItemID == item.id {
+                            Divider().overlay(DeltaColors.purple.opacity(0.12))
+                            if applied {
+                                Button { patchStore.restoreInline(item) } label: { Label("RESTORE ORIGINAL", systemImage: "arrow.uturn.backward.circle.fill").font(.system(size: 9, weight: .black)).foregroundStyle(.white).frame(maxWidth: .infinity, minHeight: 38).background(Color.orange, in: RoundedRectangle(cornerRadius: 10, style: .continuous)) }.buttonStyle(.plain).disabled(patchStore.isBusy)
+                            } else if item.isLocked {
+                                Button { patchStore.requestUnlock(for: item) } label: { Label("UNLOCK PATCH", systemImage: "lock.open.fill").font(.system(size: 9, weight: .black)).foregroundStyle(.white).frame(maxWidth: .infinity, minHeight: 38).background(DeltaColors.purple, in: RoundedRectangle(cornerRadius: 10, style: .continuous)) }.buttonStyle(.plain).disabled(patchStore.isBusy)
+                            } else {
+                                Button { patchStore.applyInline(item) } label: { Label("APPLY PATCH", systemImage: "play.fill").font(.system(size: 9, weight: .black)).foregroundStyle(.white).frame(maxWidth: .infinity, minHeight: 38).background(DeltaColors.purple, in: RoundedRectangle(cornerRadius: 10, style: .continuous)) }.buttonStyle(.plain).disabled(patchStore.isBusy)
                             }
                         }
                     }

@@ -55,6 +55,7 @@ struct PatchPasswordRequest: Identifiable {
 enum PatchProjectLibrary {
     private static let categoryDefaultsKey = "patch.game.category"
     private static let featureDefaultsKey = "patch.feature.category"
+    private static let featureIdentifierKey = "patch.feature.identifier"
     private static let remoteDefaultsKey = "patch.remote.mapping"
     private static let remoteVersionKey = "patch.remote.version"
     private static let remotePatchVersionKey = "patch.remote.patch.version"
@@ -200,6 +201,19 @@ enum PatchProjectLibrary {
         var features = UserDefaults.standard.dictionary(forKey: featureDefaultsKey) as? [String: String] ?? [:]
         features[packageID.uuidString] = category.rawValue
         UserDefaults.standard.set(features, forKey: featureDefaultsKey)
+        setFeatureIdentifier(category.rawValue, for: packageID)
+    }
+
+    static func featureIdentifier(for item: PatchLibraryItem) -> String {
+        let identifiers = UserDefaults.standard.dictionary(forKey: featureIdentifierKey) as? [String: String]
+        if let value = identifiers?[item.id.uuidString], !value.isEmpty { return value }
+        return featureCategory(for: item).rawValue
+    }
+
+    static func setFeatureIdentifier(_ identifier: String, for packageID: UUID) {
+        var identifiers = UserDefaults.standard.dictionary(forKey: featureIdentifierKey) as? [String: String] ?? [:]
+        identifiers[packageID.uuidString] = identifier.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        UserDefaults.standard.set(identifiers, forKey: featureIdentifierKey)
     }
 
     static func remotePackageID(for remoteID: Int) -> UUID? {
@@ -381,7 +395,7 @@ enum PatchProjectLibrary {
         if fileManager.fileExists(atPath: workspaceBaseRoot.path) {
             try fileManager.removeItem(at: workspaceBaseRoot)
         }
-        [categoryDefaultsKey, featureDefaultsKey, remoteDefaultsKey, remoteVersionKey, remotePatchVersionKey, remoteChangelogKey, remoteChecksumKey, remoteNameKey, remoteIconKey]
+        [categoryDefaultsKey, featureDefaultsKey, featureIdentifierKey, remoteDefaultsKey, remoteVersionKey, remotePatchVersionKey, remoteChangelogKey, remoteChecksumKey, remoteNameKey, remoteIconKey]
             .forEach { UserDefaults.standard.removeObject(forKey: $0) }
     }
 
