@@ -70,7 +70,7 @@ struct RemoteAppConfig: Codable {
     }
     func stop() { task?.cancel(); task = nil }
     func refresh() async {
-        var request = URLRequest(url: Self.url); request.cachePolicy = .reload; request.timeoutInterval = 12
+        var request = URLRequest(url: Self.url); request.cachePolicy = .reloadIgnoringLocalCacheData; request.timeoutInterval = 12
         guard let (data, response) = try? await URLSession.shared.data(for: request), let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode), let value = try? JSONDecoder().decode(RemoteAppConfig.self, from: data) else { return }
         config = value; UserDefaults.standard.set(data, forKey: Self.cacheKey); applyTheme(value.theme)
     }
