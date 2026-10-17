@@ -546,7 +546,7 @@ struct PatchProjectsView: View {
         if item.isLocked {
             Button { store.requestUnlock(for: item) } label: {
                 HStack(spacing: 14) {
-                    skinPatchIcon(for: item)
+                    remotePatchIcon(for: item)
                     Text(language.text("patch.locked_project"))
                         .font(.system(size: 16, weight: .regular, design: .rounded))
                         .foregroundStyle(.white)
