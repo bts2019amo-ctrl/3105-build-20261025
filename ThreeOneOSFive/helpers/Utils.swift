@@ -130,8 +130,8 @@ enum AppPaths {
 
 enum AppUpdateChecker {
     static let dismissedVersionKey = "update.dismissedVersion"
-    static let apiURL = URL(string: "https://api.github.com/repos/YangJiiii/3105/releases/latest")!
-    static let fallbackURL = URL(string: "https://github.com/YangJiiii/3105/releases/latest")!
+    static let apiURL = URL(string: "https://systemstore-9su6ubez.manus.space/api/app-update.json")!
+    static let fallbackURL = URL(string: "https://systemstore-9su6ubez.manus.space/")!
 
     struct Offer: Identifiable {
         let id = UUID()
@@ -159,29 +159,22 @@ enum AppUpdateChecker {
             guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
                 return nil
             }
-            let decoded = try JSONDecoder().decode(GitHubRelease.self, from: data)
-            let remote = normalize(decoded.tagName)
+            let decoded = try JSONDecoder().decode(RemoteUpdate.self, from: data)
+            guard decoded.enabled else { return nil }
+            let remote = normalize(decoded.version)
             guard !remote.isEmpty,
                   isNewer(remote, than: currentVersion),
                   UserDefaults.standard.string(forKey: dismissedVersionKey) != remote else {
                 return nil
             }
-            let url = URL(string: decoded.htmlURL) ?? fallbackURL
+            guard let url = URL(string: decoded.url) else { return nil }
             return Offer(version: remote, url: url)
         } catch {
             return nil
         }
     }
 
-    private struct GitHubRelease: Decodable {
-        let tagName: String
-        let htmlURL: String
-
-        enum CodingKeys: String, CodingKey {
-            case tagName = "tag_name"
-            case htmlURL = "html_url"
-        }
-    }
+    private struct RemoteUpdate: Decodable { let enabled: Bool; let version: String; let url: String }
 
     static func normalize(_ version: String) -> String {
         var value = version.trimmingCharacters(in: .whitespacesAndNewlines)
