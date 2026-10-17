@@ -563,7 +563,7 @@ struct PatchProjectsView: View {
             .buttonStyle(.plain)
         } else {
             HStack(spacing: 12) {
-                skinPatchIcon(for: item)
+                remotePatchIcon(for: item)
                 Text(PatchProjectLibrary.localizedDisplayName(for: item, language: language))
                     .font(.system(size: 16, weight: .regular, design: .rounded))
                     .foregroundStyle(.white)
@@ -583,9 +583,8 @@ struct PatchProjectsView: View {
     }
 
     @ViewBuilder
-    private func skinPatchIcon(for item: PatchLibraryItem) -> some View {
-        if PatchProjectLibrary.featureCategory(for: item) == .skin,
-           let iconURL = PatchProjectLibrary.remoteIconURL(for: item.id) {
+    private func remotePatchIcon(for item: PatchLibraryItem) -> some View {
+        if let iconURL = PatchProjectLibrary.remoteIconURL(for: item.id) {
             AsyncImage(url: iconURL) { phase in
                 if let image = phase.image {
                     image.resizable().scaledToFill()
@@ -600,6 +599,8 @@ struct PatchProjectsView: View {
                     .stroke(Color.white.opacity(0.18), lineWidth: 0.8)
             }
             .transition(.scale(scale: 0.88).combined(with: .opacity))
+        } else {
+            AppRowIcon(systemName: "shippingbox.fill", symbolSize: 22, frameSize: 58)
         }
     }
 

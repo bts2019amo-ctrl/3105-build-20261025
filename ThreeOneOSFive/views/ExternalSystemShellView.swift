@@ -1049,7 +1049,7 @@ private struct DeltaRemoteFeatureTab: View {
                             }
                         } label: {
                             HStack(spacing: 10) {
-                                if feature == .skin, let iconURL = PatchProjectLibrary.remoteIconURL(for: item.id) {
+                                if let iconURL = PatchProjectLibrary.remoteIconURL(for: item.id) {
                                     AsyncImage(url: iconURL) { phase in
                                         if let image = phase.image { image.resizable().scaledToFit().padding(7) }
                                         else { Image(systemName: icon).resizable().scaledToFit().padding(15).foregroundStyle(DeltaColors.purple) }
