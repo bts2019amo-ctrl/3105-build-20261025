@@ -5,6 +5,7 @@ struct ExternalSystemShellView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var keySession: IOSKeySession
     @EnvironmentObject private var patchStore: PatchProjectStore
+    @StateObject private var remoteConfig = RemoteAppConfigStore()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(AppLanguage.storageKey) private var languageCode = AppLanguage.english.rawValue
 
@@ -27,7 +28,7 @@ struct ExternalSystemShellView: View {
         ZStack {
             switch route {
             case .splash:
-                DeltaSplashView()
+                DeltaSplashView(brandName: remoteConfig.config.brandName, subtitle: remoteConfig.config.subtitle)
                     .transition(.opacity)
             case .selector:
                 DeltaGameSelectorView(
@@ -57,7 +58,7 @@ struct ExternalSystemShellView: View {
             }
 
             if showAnnouncement {
-                DeltaAnnouncementView(isVietnamese: isVietnamese) {
+                DeltaAnnouncementView(isVietnamese: isVietnamese, config: remoteConfig.config) {
                     withAnimation(motion) {
                         showAnnouncement = false
                         route = .dashboard
@@ -65,6 +66,25 @@ struct ExternalSystemShellView: View {
                 }
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .zIndex(10)
+            }
+
+            if remoteConfig.config.maintenance.enabled {
+                Color.black.opacity(0.96)
+                    .ignoresSafeArea()
+                    .overlay {
+                        VStack(spacing: 14) {
+                            Image(systemName: "wrench.and.screwdriver.fill")
+                                .font(.system(size: 34, weight: .bold))
+                                .foregroundStyle(DeltaColors.purple)
+                            Text(remoteConfig.config.maintenance.title.isEmpty ? "Em manutenção" : remoteConfig.config.maintenance.title)
+                                .font(.title2.weight(.bold))
+                            Text(remoteConfig.config.maintenance.message)
+                                .multilineTextAlignment(.center)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(32)
+                    }
+                    .zIndex(30)
             }
 
             if streamProofEnabled && (isScreenCaptured || screenshotShieldActive) {
@@ -89,6 +109,8 @@ struct ExternalSystemShellView: View {
         .animation(motion, value: route)
         .animation(motion, value: showAnnouncement)
         .task {
+            remoteConfig.start()
+            await remoteConfig.refresh()
             guard route == .splash else { return }
             try? await Task.sleep(nanoseconds: reduceMotion ? 350_000_000 : 1_650_000_000)
             guard !Task.isCancelled else { return }
@@ -304,6 +326,8 @@ enum DeltaColors {
 }
 
 private struct DeltaSplashView: View {
+    let brandName: String
+    let subtitle: String
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pulse = false
     @State private var loadingIndex = 0
@@ -323,7 +347,7 @@ private struct DeltaSplashView: View {
                     .scaleEffect(pulse ? 1.05 : 0.95)
                     .shadow(color: DeltaColors.purple.opacity(0.35), radius: pulse ? 24 : 10)
 
-                Text("EXTERNAL SYSTEM")
+                Text(brandName)
                     .font(.system(size: 22, weight: .black, design: .rounded))
                     .tracking(1.3)
                     .foregroundStyle(DeltaColors.ink)
@@ -332,7 +356,7 @@ private struct DeltaSplashView: View {
                     .tint(DeltaColors.purple)
                     .scaleEffect(1.15)
 
-                Text(messages[loadingIndex])
+                Text(subtitle.isEmpty ? messages[loadingIndex] : subtitle)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(DeltaColors.muted)
                     .id(loadingIndex)
@@ -490,6 +514,7 @@ private struct DeltaGameRow: View {
 
 private struct DeltaAnnouncementView: View {
     let isVietnamese: Bool
+    let config: RemoteAppConfig
     let dismiss: () -> Void
     @State private var appeared = false
 
@@ -500,10 +525,10 @@ private struct DeltaAnnouncementView: View {
                 ZStack(alignment: .bottomLeading) {
                     LinearGradient(colors: [DeltaColors.purpleDark, DeltaColors.purple], startPoint: .topLeading, endPoint: .bottomTrailing)
                     VStack(alignment: .leading, spacing: 0) {
-                        Text("EXTERNAL")
+                        Text(config.brandName.split(separator: " ").first.map(String.init) ?? "EXTERNAL")
                             .font(.system(size: 40, weight: .black, design: .rounded))
                             .foregroundStyle(.white.opacity(0.95))
-                        Text("SYSTEM")
+                        Text(config.brandName.split(separator: " ").dropFirst().joined(separator: " ").isEmpty ? "SYSTEM" : config.brandName.split(separator: " ").dropFirst().joined(separator: " "))
                             .font(.system(size: 31, weight: .black, design: .rounded))
                             .foregroundStyle(.white.opacity(0.85))
                     }
@@ -513,13 +538,13 @@ private struct DeltaAnnouncementView: View {
 
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
-                        Label(isVietnamese ? "Thông Báo" : "Announcement", systemImage: "megaphone.fill")
+                        Label(config.announcement.enabled && !config.announcement.title.isEmpty ? config.announcement.title : (isVietnamese ? "Thông Báo" : "Announcement"), systemImage: "megaphone.fill")
                             .font(.headline.weight(.bold))
                             .foregroundStyle(DeltaColors.ink)
                         Spacer()
                         Button(action: dismiss) { Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary) }
                     }
-                    Text(isVietnamese ? "Hiện Tại Chỉ Sử Dụng Được Aimbot Và AimBot Vector\n\nEXTERNAL SYSTEM cảm ơn các bạn đã đợi phiên bản mới.\n\nCó lỗi gì cứ góp ý nhé, chân thành cảm ơn các bạn" : "Hello everyone, this is a beta test version.\n\nCurrently, only AimBot and AimBot Vector are available for use.\n\nEXTERNAL SYSTEM thanks you all for waiting for the new version.\n\nIf you encounter any bugs or issues, feel free to give feedback. Thank you very much!")
+                    Text(config.announcement.enabled && !config.announcement.message.isEmpty ? config.announcement.message : (isVietnamese ? "Hiện Tại Chỉ Sử Dụng Được Aimbot Và AimBot Vector\n\nEXTERNAL SYSTEM cảm ơn các bạn đã đợi phiên bản mới.\n\nCó lỗi gì cứ góp ý nhé, chân thành cảm ơn các bạn" : "Hello everyone, this is a beta test version.\n\nCurrently, only AimBot and AimBot Vector are available for use.\n\nEXTERNAL SYSTEM thanks you all for waiting for the new version.\n\nIf you encounter any bugs or issues, feel free to give feedback. Thank you very much!"))
                         .font(.subheadline)
                         .foregroundStyle(DeltaColors.ink)
                         .fixedSize(horizontal: false, vertical: true)

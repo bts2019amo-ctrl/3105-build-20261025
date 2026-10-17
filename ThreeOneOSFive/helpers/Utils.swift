@@ -13,6 +13,75 @@ class AppLog: ObservableObject {
 }
 func log(_ msg: String) { AppLog.shared.append("[3105] \(msg)") }
 
+struct RemoteAppTab: Codable, Identifiable { let id: String; let title: String; let icon: String; let visible: Bool; let order: Int }
+struct RemoteAppCategory: Codable, Identifiable { let id: String; let title: String; let icon: String; let color: String; let game: String; let visible: Bool; let order: Int }
+struct RemoteAppConfig: Codable {
+    var schemaVersion: Int = 1
+    var appName: String = "3105"
+    var brandName: String = "EXTERNAL SYSTEM"
+    var subtitle: String = "PATCH CONTROL"
+    var logoUrl: String?
+    var discordUrl: String?
+    var supportUrl: String?
+    var maintenance: RemoteMessage = .init()
+    var announcement: RemoteMessage = .init()
+    var theme: RemoteTheme = .init()
+    var tabs: [RemoteAppTab] = []
+    var categories: [RemoteAppCategory] = []
+    var featureFlags: [String: Bool] = [:]
+    var texts: [String: String] = [:]
+    var updatedAt: String?
+    struct RemoteMessage: Codable { var enabled: Bool = false; var title: String = ""; var message: String = "" }
+    struct RemoteTheme: Codable { var mode: String = "lavender"; var darkMode: Bool = false; var hue: Double? }
+    init() {}
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        schemaVersion = try c.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 1
+        appName = try c.decodeIfPresent(String.self, forKey: .appName) ?? appName
+        brandName = try c.decodeIfPresent(String.self, forKey: .brandName) ?? brandName
+        subtitle = try c.decodeIfPresent(String.self, forKey: .subtitle) ?? subtitle
+        logoUrl = try c.decodeIfPresent(String.self, forKey: .logoUrl)
+        discordUrl = try c.decodeIfPresent(String.self, forKey: .discordUrl)
+        supportUrl = try c.decodeIfPresent(String.self, forKey: .supportUrl)
+        maintenance = try c.decodeIfPresent(RemoteMessage.self, forKey: .maintenance) ?? .init()
+        announcement = try c.decodeIfPresent(RemoteMessage.self, forKey: .announcement) ?? .init()
+        theme = try c.decodeIfPresent(RemoteTheme.self, forKey: .theme) ?? .init()
+        tabs = try c.decodeIfPresent([RemoteAppTab].self, forKey: .tabs) ?? []
+        categories = try c.decodeIfPresent([RemoteAppCategory].self, forKey: .categories) ?? []
+        featureFlags = try c.decodeIfPresent([String: Bool].self, forKey: .featureFlags) ?? [:]
+        texts = try c.decodeIfPresent([String: String].self, forKey: .texts) ?? [:]
+        updatedAt = try c.decodeIfPresent(String.self, forKey: .updatedAt)
+    }
+}
+
+@MainActor final class RemoteAppConfigStore: ObservableObject {
+    @Published private(set) var config = RemoteAppConfig()
+    private var task: Task<Void, Never>?
+    private static let cacheKey = "remote.app.config.v1"
+    private static let url = URL(string: "https://systemstore-9su6ubez.manus.space/api/app-config.json")!
+    init() {
+        if let data = UserDefaults.standard.data(forKey: Self.cacheKey), let cached = try? JSONDecoder().decode(RemoteAppConfig.self, from: data) { config = cached; applyTheme(cached.theme) }
+    }
+    func start() {
+        guard task == nil else { return }
+        task = Task { [weak self] in
+            while !Task.isCancelled { await self?.refresh(); try? await Task.sleep(nanoseconds: 3_000_000_000) }
+        }
+    }
+    func stop() { task?.cancel(); task = nil }
+    func refresh() async {
+        var request = URLRequest(url: Self.url); request.cachePolicy = .reload; request.timeoutInterval = 12
+        guard let (data, response) = try? await URLSession.shared.data(for: request), let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode), let value = try? JSONDecoder().decode(RemoteAppConfig.self, from: data) else { return }
+        config = value; UserDefaults.standard.set(data, forKey: Self.cacheKey); applyTheme(value.theme)
+    }
+    func text(_ key: String, fallback: String) -> String { config.texts[key] ?? fallback }
+    private func applyTheme(_ theme: RemoteAppConfig.RemoteTheme) {
+        UserDefaults.standard.set(theme.mode, forKey: "externalSystem.theme")
+        UserDefaults.standard.set(theme.darkMode, forKey: "externalSystem.darkMode")
+        if let hue = theme.hue { UserDefaults.standard.set(hue, forKey: "externalSystem.customHue") }
+    }
+}
+
 // Retain the pipe for the app's lifetime so stdout/stderr stay redirected.
 private var logCapturePipe: Pipe?
 
