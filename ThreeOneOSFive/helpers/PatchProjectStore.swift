@@ -39,6 +39,7 @@ private struct RemoteFeedPatch: Decodable {
     let changelog: String?
     let checksumSha256: String
     let iconUrl: String?
+    let password: String?
     let updatedAt: Int64
 }
 
@@ -283,6 +284,7 @@ final class PatchProjectStore: ObservableObject {
                             data: dataToPersist,
                             summary: summaryToPersist,
                             existingURL: urlToPersist,
+                            password: patch.password,
                             category: category,
                             feature: feature,
                             remoteID: patch.id,
