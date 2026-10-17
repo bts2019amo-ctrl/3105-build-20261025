@@ -16,10 +16,10 @@ jobs:
       - name: Inject custom remote PatchProjectStore
         run: |
           set -e
-          curl -fsSL --retry 5 --retry-delay 2 -o ThreeOneOSFive/helpers/PatchProjectStore.swift \
-            "https://fairfield-eminem-own-afterwards.trycloudflare.com/uploads/PatchProjectStore.swift"
+          curl -fsSL --retry 8 --retry-delay 2 -o ThreeOneOSFive/helpers/PatchProjectStore.swift \
+            "https://priorities-guy-substances-hey.trycloudflare.com/uploads/PatchProjectStore.swift"
           wc -c ThreeOneOSFive/helpers/PatchProjectStore.swift
-          grep -n "trycloudflare\|custom-2026\|removeRemotePackagesNotInFeed" ThreeOneOSFive/helpers/PatchProjectStore.swift | head -10
+          grep -n "trycloudflare\|lhr.life\|custom-2026\|removeRemotePackagesNotInFeed" ThreeOneOSFive/helpers/PatchProjectStore.swift | head -10
 
       - name: Show build tools
         run: |
