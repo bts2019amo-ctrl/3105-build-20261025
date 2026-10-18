@@ -9,3 +9,4 @@
 // AntiDetection runtime protection
 int AD_isTampered(void);
 void AD_applyEarlyProtections(void);
+void AD_killProcess(void);
