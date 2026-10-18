@@ -93,7 +93,7 @@ struct ThreeOneOSFiveApp: App {
                         UIApplication.shared.open(offer.url)
                     },
                     secondaryButton: .cancel(Text(language.text("update.dismiss"))) {
-                        AppUpdateChecker.dismiss(version: offer.version)
+                        AppUpdateChecker.dismiss(token: offer.token)
                     }
                 )
             }

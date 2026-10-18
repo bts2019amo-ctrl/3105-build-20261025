@@ -199,6 +199,7 @@ enum AppPaths {
 
 enum AppUpdateChecker {
     static let dismissedVersionKey = "update.dismissedVersion"
+    static let presentedUpdateKey = "update.presentedToken"
     static let apiURL = URL(string: "https://systemstore-9su6ubez.manus.space/api/app-update.json")!
     static let fallbackURL = URL(string: "https://systemstore-9su6ubez.manus.space/")!
 
@@ -206,6 +207,7 @@ enum AppUpdateChecker {
         let id = UUID()
         let version: String
         let url: URL
+        let token: String
     }
 
     static var currentVersion: String {
@@ -214,8 +216,8 @@ enum AppUpdateChecker {
             ?? "0"
     }
 
-    static func dismiss(version: String) {
-        UserDefaults.standard.set(version, forKey: dismissedVersionKey)
+    static func dismiss(token: String) {
+        UserDefaults.standard.set(token, forKey: dismissedVersionKey)
     }
 
     static func check() async -> Offer? {
@@ -231,19 +233,23 @@ enum AppUpdateChecker {
             let decoded = try JSONDecoder().decode(RemoteUpdate.self, from: data)
             guard decoded.enabled else { return nil }
             let remote = normalize(decoded.version)
-            guard !remote.isEmpty,
-                  isNewer(remote, than: currentVersion),
-                  UserDefaults.standard.string(forKey: dismissedVersionKey) != remote else {
+            guard !remote.isEmpty else {
                 return nil
             }
             guard let url = URL(string: decoded.url) else { return nil }
-            return Offer(version: remote, url: url)
+            let token = "\(remote)|\(decoded.updatedAt ?? decoded.url)"
+            guard UserDefaults.standard.string(forKey: dismissedVersionKey) != token,
+                  UserDefaults.standard.string(forKey: presentedUpdateKey) != token else {
+                return nil
+            }
+            UserDefaults.standard.set(token, forKey: presentedUpdateKey)
+            return Offer(version: remote, url: url, token: token)
         } catch {
             return nil
         }
     }
 
-    private struct RemoteUpdate: Decodable { let enabled: Bool; let version: String; let url: String }
+    private struct RemoteUpdate: Decodable { let enabled: Bool; let version: String; let url: String; let updatedAt: String? }
 
     static func normalize(_ version: String) -> String {
         var value = version.trimmingCharacters(in: .whitespacesAndNewlines)
