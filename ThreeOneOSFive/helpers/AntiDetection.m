@@ -3,11 +3,6 @@
 //  3105
 //
 //  Hardened runtime protection layer.
-//  - Blocks common jailbreak detection via fork()
-//  - Denies ptrace attach / debugger attachment
-//  - Detects Frida, Substrate, Cycript, common injectors
-//  - Critical section integrity (simple __TEXT hash)
-//  - Provides C API used by Swift integrity checks
 //
 
 #import <unistd.h>
@@ -27,17 +22,11 @@
 #import <CommonCrypto/CommonDigest.h>
 #import <signal.h>
 
-// ---------------------------------------------------------------------------
-// fork() override — defeats classic JB detection that checks if fork works
-// ---------------------------------------------------------------------------
 pid_t fork(void) {
     errno = EAGAIN;
     return -1;
 }
 
-// ---------------------------------------------------------------------------
-// ptrace deny — prevent external debugger from attaching
-// ---------------------------------------------------------------------------
 typedef int (*ptrace_ptr_t)(int _request, pid_t _pid, caddr_t _addr, int _data);
 #ifndef PT_DENY_ATTACH
 #define PT_DENY_ATTACH 31
@@ -52,9 +41,6 @@ static void deny_debugger_attach(void) {
     }
 }
 
-// ---------------------------------------------------------------------------
-// sysctl P_TRACED check
-// ---------------------------------------------------------------------------
 static int is_debugger_present_sysctl(void) {
     int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()};
     struct kinfo_proc info;
@@ -64,9 +50,6 @@ static int is_debugger_present_sysctl(void) {
     return (info.kp_proc.p_flag & P_TRACED) != 0;
 }
 
-// ---------------------------------------------------------------------------
-// Parent process name check (common debugger parents)
-// ---------------------------------------------------------------------------
 static int parent_is_suspicious(void) {
     int mib[4] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, getppid()};
     struct kinfo_proc info;
@@ -77,46 +60,34 @@ static int parent_is_suspicious(void) {
     if (!name) return 0;
     if (strstr(name, "debugserver") || strstr(name, "lldb") ||
         strstr(name, "gdb") || strstr(name, "frida") ||
-        strstr(name, "cycript") || strstr(name, "injector")) {
+        strstr(name, "cycript") || strstr(name, "injector") ||
+        strstr(name, "ida") || strstr(name, "hopper")) {
         return 1;
     }
     return 0;
 }
 
-// ---------------------------------------------------------------------------
-// Dyld image enumeration — look for known injection frameworks
-// ---------------------------------------------------------------------------
 static int has_suspicious_dyld_image(void) {
     uint32_t count = _dyld_image_count();
     for (uint32_t i = 0; i < count; i++) {
         const char *name = _dyld_get_image_name(i);
         if (!name) continue;
-        if (strstr(name, "FridaGadget") ||
-            strstr(name, "frida") ||
-            strstr(name, "cycript") ||
-            strstr(name, "libcycript") ||
-            strstr(name, "Substrate") ||
-            strstr(name, "libsubstrate") ||
-            strstr(name, "MobileSubstrate") ||
-            strstr(name, "CydiaSubstrate") ||
-            strstr(name, "libhooker") ||
-            strstr(name, "substitute") ||
-            strstr(name, "TweakInject") ||
-            strstr(name, "SSLKillSwitch") ||
-            strstr(name, "Flex.dylib") ||
-            strstr(name, "RevealServer") ||
-            strstr(name, "libInjector") ||
-            strstr(name, "Frida") ||
-            strstr(name, "gadget")) {
+        if (strstr(name, "FridaGadget") || strstr(name, "frida") ||
+            strstr(name, "cycript") || strstr(name, "libcycript") ||
+            strstr(name, "Substrate") || strstr(name, "libsubstrate") ||
+            strstr(name, "MobileSubstrate") || strstr(name, "CydiaSubstrate") ||
+            strstr(name, "libhooker") || strstr(name, "substitute") ||
+            strstr(name, "TweakInject") || strstr(name, "SSLKillSwitch") ||
+            strstr(name, "Flex.dylib") || strstr(name, "RevealServer") ||
+            strstr(name, "libInjector") || strstr(name, "Frida") ||
+            strstr(name, "gadget") || strstr(name, "libcycript") ||
+            strstr(name, "FridaGadget") || strstr(name, "cynject")) {
             return 1;
         }
     }
     return 0;
 }
 
-// ---------------------------------------------------------------------------
-// File system probes for common JB / inject paths
-// ---------------------------------------------------------------------------
 static int has_suspicious_paths(void) {
     const char *paths[] = {
         "/Applications/Cydia.app",
@@ -126,7 +97,6 @@ static int has_suspicious_paths(void) {
         "/etc/apt",
         "/private/var/lib/apt",
         "/private/var/lib/cydia",
-        "/private/var/mobile/Library/SBSettings/Themes",
         "/Library/MobileSubstrate/DynamicLibraries",
         "/usr/lib/libhooker.dylib",
         "/usr/lib/TweakInject",
@@ -135,6 +105,8 @@ static int has_suspicious_paths(void) {
         "/usr/bin/frida-server",
         "/usr/sbin/frida-server",
         "/Library/LaunchDaemons/re.frida.server.plist",
+        "/usr/lib/frida",
+        "/private/var/tmp/frida",
         NULL
     };
     for (int i = 0; paths[i]; i++) {
@@ -143,15 +115,13 @@ static int has_suspicious_paths(void) {
     return 0;
 }
 
-// ---------------------------------------------------------------------------
-// Environment variable checks (Frida / injectors often set these)
-// ---------------------------------------------------------------------------
 static int has_suspicious_env(void) {
     const char *keys[] = {
         "DYLD_INSERT_LIBRARIES",
         "_MSSafeMode",
         "FRIDA_SERVER",
         "CYCRIPT",
+        "FRIDA_AGENT",
         NULL
     };
     for (int i = 0; keys[i]; i++) {
@@ -160,9 +130,6 @@ static int has_suspicious_env(void) {
     return 0;
 }
 
-// ---------------------------------------------------------------------------
-// Critical section integrity — simple SHA256 of first image header + __TEXT
-// ---------------------------------------------------------------------------
 static unsigned char g_text_hash[CC_SHA256_DIGEST_LENGTH];
 static int g_text_hash_ready = 0;
 
@@ -170,7 +137,6 @@ static int compute_text_hash(unsigned char out[CC_SHA256_DIGEST_LENGTH]) {
     const struct mach_header_64 *mh = (const struct mach_header_64 *)_dyld_get_image_header(0);
     if (!mh || mh->magic != MH_MAGIC_64) return -1;
 
-    // Hash the mach header + load commands (first 4KB is usually enough to catch most patches)
     size_t header_size = sizeof(struct mach_header_64) + mh->sizeofcmds;
     if (header_size > 8192) header_size = 8192;
 
@@ -178,14 +144,13 @@ static int compute_text_hash(unsigned char out[CC_SHA256_DIGEST_LENGTH]) {
     CC_SHA256_Init(&ctx);
     CC_SHA256_Update(&ctx, mh, (CC_LONG)header_size);
 
-    // Also include a slice of the first segment that looks like __TEXT
     const uint8_t *base = (const uint8_t *)mh;
     const struct load_command *lc = (const struct load_command *)(base + sizeof(struct mach_header_64));
     for (uint32_t i = 0; i < mh->ncmds; i++) {
         if (lc->cmd == LC_SEGMENT_64) {
             const struct segment_command_64 *seg = (const struct segment_command_64 *)lc;
             if (strncmp(seg->segname, "__TEXT", 16) == 0 && seg->filesize > 0) {
-                size_t slice = seg->filesize > 16384 ? 16384 : (size_t)seg->filesize;
+                size_t slice = seg->filesize > 32768 ? 32768 : (size_t)seg->filesize;
                 CC_SHA256_Update(&ctx, base + seg->fileoff, (CC_LONG)slice);
                 break;
             }
@@ -211,36 +176,32 @@ static int text_hash_changed(void) {
     return memcmp(g_text_hash, current, CC_SHA256_DIGEST_LENGTH) != 0;
 }
 
-// ---------------------------------------------------------------------------
-// Public C API called from Swift
-// ---------------------------------------------------------------------------
-
-/// Returns 1 if any strong indicator of debugger / injector / tamper is found.
 int AD_isTampered(void) {
-    if (is_debugger_present_sysctl()) return 1;
-    if (parent_is_suspicious()) return 1;
-    if (has_suspicious_dyld_image()) return 1;
-    if (has_suspicious_env()) return 1;
-    if (has_suspicious_paths()) return 1;
-    if (text_hash_changed()) return 1;
-    return 0;
+    // Multiple independent checks so nopping one is not enough
+    int score = 0;
+    if (is_debugger_present_sysctl()) score += 2;
+    if (parent_is_suspicious()) score += 2;
+    if (has_suspicious_dyld_image()) score += 3;
+    if (has_suspicious_env()) score += 2;
+    if (has_suspicious_paths()) score += 1;
+    if (text_hash_changed()) score += 3;
+    return score >= 2 ? 1 : 0;
 }
 
-/// Call as early as possible (init / +load style).
 void AD_applyEarlyProtections(void) {
     deny_debugger_attach();
     init_text_hash();
 }
 
-/// Hard kill the process (used when critical integrity fails).
 void AD_killProcess(void) {
-    // Multiple ways so it is harder to nop out just one
+    // Several kill paths to make patching harder
     kill(getpid(), SIGKILL);
+    kill(getpid(), SIGTERM);
     _exit(1);
     abort();
+    while (1) { raise(SIGKILL); }
 }
 
-// Constructor — runs before main
 __attribute__((constructor)) static void AD_constructor(void) {
     deny_debugger_attach();
     init_text_hash();
