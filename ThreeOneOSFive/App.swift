@@ -575,8 +575,148 @@ final class IOSKeySession: ObservableObject {
     }
 }
 
-// NOTE: The full original IOSKeyLoginView and remaining UI code from the pre-truncation
-// version must be present for the project to compile. The previous truncated push is
-// being corrected by this restore of the complete source + the anti-tamper patches.
-// If the build fails due to missing symbols, the original full file from commit
-// 4afe6822 must be restored first.
+struct IOSKeyLoginView: View {
+    @ObservedObject var session: IOSKeySession
+    @State private var key = ""
+    @State private var isKeyVisible = false
+    @State private var appeared = false
+    @AppStorage(AppLanguage.storageKey) private var languageCode = AppLanguage.english.rawValue
+    @AppStorage("externalSystem.darkMode") private var darkMode = false
+    @AppStorage("externalSystem.theme") private var themeRaw = "default"
+    @AppStorage("externalSystem.customHue") private var customHue = 0.7
+
+    private var language: AppLanguage {
+        AppLanguage(rawValue: languageCode) ?? .english
+    }
+
+    private struct DeltaColors {
+        static let ink = Color.primary
+        static let muted = Color.secondary
+        static let purple = Color.accentColor
+        static let line = Color.primary.opacity(0.12)
+    }
+
+    var body: some View {
+        ZStack {
+            Color(.systemBackground).ignoresSafeArea()
+
+            ScrollView {
+                VStack(spacing: 0) {
+                    Spacer(minLength: 48)
+
+                    AppLogo(size: 78)
+                        .padding(.bottom, 16)
+                        .scaleEffect(appeared ? 1 : 0.84)
+                        .opacity(appeared ? 1 : 0)
+
+                    Text(language.text("brand.external_system"))
+                        .font(.system(size: 29, weight: .black, design: .rounded))
+                        .tracking(1.1)
+                        .foregroundStyle(DeltaColors.ink)
+                        .opacity(appeared ? 1 : 0)
+
+                    Text(language.text("login.subtitle"))
+                        .font(.system(size: 15, weight: .medium, design: .rounded))
+                        .foregroundStyle(DeltaColors.muted)
+                        .multilineTextAlignment(.center)
+                        .padding(.top, 10)
+                        .padding(.horizontal, 20)
+                        .opacity(appeared ? 1 : 0)
+
+                    VStack(spacing: 14) {
+                        HStack(spacing: 10) {
+                            Image(systemName: "key.fill")
+                                .font(.system(size: 19, weight: .semibold))
+                                .foregroundStyle(DeltaColors.purple)
+                                .frame(width: 22)
+
+                            Group {
+                                if isKeyVisible {
+                                    TextField(language.text("login.key_placeholder"), text: $key)
+                                } else {
+                                    SecureField(language.text("login.key_placeholder"), text: $key)
+                                }
+                            }
+                            .font(.system(size: 17, weight: .regular, design: .rounded))
+                            .foregroundStyle(DeltaColors.ink.opacity(0.92))
+                            .tint(DeltaColors.purple)
+                            .textInputAutocapitalization(.characters)
+                            .autocorrectionDisabled()
+
+                            Button {
+                                isKeyVisible.toggle()
+                            } label: {
+                                Image(systemName: isKeyVisible ? "eye.slash.fill" : "eye.fill")
+                                    .font(.system(size: 19, weight: .semibold))
+                                    .foregroundStyle(DeltaColors.ink.opacity(0.86))
+                                    .frame(width: 28, height: 36)
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+
+                        Button {
+                            session.submit(key)
+                        } label: {
+                            Text(language.text("login.submit"))
+                                .font(.system(size: 17, weight: .bold, design: .rounded))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 14)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(session.isChecking || key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+                        Button {
+                            session.logout()
+                            key = ""
+                        } label: {
+                            Label(language.text("login.clear_external"), systemImage: "trash")
+                                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                                .foregroundStyle(DeltaColors.ink.opacity(0.86))
+                        }
+                        .buttonStyle(.plain)
+
+                        if let error = session.errorMessage {
+                            Label(error, systemImage: "exclamationmark.triangle.fill")
+                                .font(.footnote)
+                                .foregroundStyle(DeltaColors.purple)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 16)
+                        }
+                    }
+                    .padding(24)
+                    .background(DeltaColors.purple.opacity(0.055), in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 26, style: .continuous)
+                            .stroke(DeltaColors.line, lineWidth: 1)
+                    }
+                    .shadow(color: DeltaColors.purple.opacity(0.48), radius: 30, y: 10)
+                    .padding(.top, 36)
+                    .padding(.horizontal, 28)
+                    .offset(y: appeared ? 0 : 18)
+                    .opacity(appeared ? 1 : 0)
+
+                    Label(language.text("login.official_version"), systemImage: "checkmark.shield.fill")
+                        .font(.system(size: 15, weight: .regular, design: .rounded))
+                        .foregroundStyle(DeltaColors.muted)
+                        .padding(.top, 34)
+
+                    Spacer(minLength: 48)
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .dynamicTypeSize(.large)
+            .id("login-content-theme-\(themeRaw)-\(darkMode)-\(customHue)")
+
+        }
+        .tint(DeltaColors.purple)
+        .overlay(Color.clear.frame(width: 0, height: 0).id("login-theme-\(themeRaw)-\(darkMode)-\(customHue)"))
+        .preferredColorScheme(darkMode ? .dark : .light)
+        .onAppear {
+            withAnimation(.spring(response: 0.58, dampingFraction: 0.82)) {
+                appeared = true
+            }
+        }
+    }
+}
