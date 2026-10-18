@@ -5,3 +5,7 @@
 #import "kexploit/kutils.h"
 #import "helpers/AppIconHelper.h"
 #import "helpers/DisplayIdentity.h"
+
+// AntiDetection runtime protection
+int AD_isTampered(void);
+void AD_applyEarlyProtections(void);
