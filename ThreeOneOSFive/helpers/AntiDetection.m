@@ -3,6 +3,11 @@
 //  3105
 //
 //  Hardened runtime protection layer.
+//  - Blocks common jailbreak detection via fork()
+//  - Denies ptrace attach / debugger attachment
+//  - Detects Frida, Substrate, Cycript, common injectors
+//  - Critical section integrity (simple __TEXT hash)
+//  - Provides C API used by Swift integrity checks
 //
 
 #import <unistd.h>
@@ -17,8 +22,10 @@
 #import <stdlib.h>
 #import <stdio.h>
 #import <fcntl.h>
-#import <signal.h>
+#import <dirent.h>
+#import <objc/runtime.h>
 #import <CommonCrypto/CommonDigest.h>
+#import <signal.h>
 
 pid_t fork(void) {
     errno = EAGAIN;
@@ -69,14 +76,23 @@ static int has_suspicious_dyld_image(void) {
     for (uint32_t i = 0; i < count; i++) {
         const char *name = _dyld_get_image_name(i);
         if (!name) continue;
-        if (strstr(name, "FridaGadget") || strstr(name, "frida") ||
-            strstr(name, "cycript") || strstr(name, "libcycript") ||
-            strstr(name, "Substrate") || strstr(name, "libsubstrate") ||
-            strstr(name, "MobileSubstrate") || strstr(name, "CydiaSubstrate") ||
-            strstr(name, "libhooker") || strstr(name, "substitute") ||
-            strstr(name, "TweakInject") || strstr(name, "SSLKillSwitch") ||
-            strstr(name, "Flex.dylib") || strstr(name, "RevealServer") ||
-            strstr(name, "libInjector") || strstr(name, "gadget")) {
+        if (strstr(name, "FridaGadget") ||
+            strstr(name, "frida") ||
+            strstr(name, "cycript") ||
+            strstr(name, "libcycript") ||
+            strstr(name, "Substrate") ||
+            strstr(name, "libsubstrate") ||
+            strstr(name, "MobileSubstrate") ||
+            strstr(name, "CydiaSubstrate") ||
+            strstr(name, "libhooker") ||
+            strstr(name, "substitute") ||
+            strstr(name, "TweakInject") ||
+            strstr(name, "SSLKillSwitch") ||
+            strstr(name, "Flex.dylib") ||
+            strstr(name, "RevealServer") ||
+            strstr(name, "libInjector") ||
+            strstr(name, "Frida") ||
+            strstr(name, "gadget")) {
             return 1;
         }
     }
@@ -92,10 +108,12 @@ static int has_suspicious_paths(void) {
         "/etc/apt",
         "/private/var/lib/apt",
         "/private/var/lib/cydia",
+        "/private/var/mobile/Library/SBSettings/Themes",
         "/Library/MobileSubstrate/DynamicLibraries",
         "/usr/lib/libhooker.dylib",
         "/usr/lib/TweakInject",
         "/var/jb",
+        "/var/containers/Bundle/iosbinpack64",
         "/usr/bin/frida-server",
         "/usr/sbin/frida-server",
         "/Library/LaunchDaemons/re.frida.server.plist",
