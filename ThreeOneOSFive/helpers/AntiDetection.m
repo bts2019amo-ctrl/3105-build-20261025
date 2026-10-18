@@ -25,6 +25,7 @@
 #import <dirent.h>
 #import <objc/runtime.h>
 #import <CommonCrypto/CommonDigest.h>
+#import <signal.h>
 
 // ---------------------------------------------------------------------------
 // fork() override — defeats classic JB detection that checks if fork works
