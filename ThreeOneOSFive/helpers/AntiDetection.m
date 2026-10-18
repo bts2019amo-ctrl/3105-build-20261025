@@ -6,6 +6,7 @@
 //  - Blocks common jailbreak detection via fork()
 //  - Denies ptrace attach / debugger attachment
 //  - Detects Frida, Substrate, Cycript, common injectors
+//  - Critical section integrity (simple __TEXT hash)
 //  - Provides C API used by Swift integrity checks
 //
 
@@ -16,12 +17,14 @@
 #import <sys/types.h>
 #import <mach/mach.h>
 #import <mach-o/dyld.h>
+#import <mach-o/loader.h>
 #import <string.h>
 #import <stdlib.h>
 #import <stdio.h>
 #import <fcntl.h>
 #import <dirent.h>
 #import <objc/runtime.h>
+#import <CommonCrypto/CommonDigest.h>
 
 // ---------------------------------------------------------------------------
 // fork() override — defeats classic JB detection that checks if fork works
@@ -157,6 +160,57 @@ static int has_suspicious_env(void) {
 }
 
 // ---------------------------------------------------------------------------
+// Critical section integrity — simple SHA256 of first image header + __TEXT
+// ---------------------------------------------------------------------------
+static unsigned char g_text_hash[CC_SHA256_DIGEST_LENGTH];
+static int g_text_hash_ready = 0;
+
+static int compute_text_hash(unsigned char out[CC_SHA256_DIGEST_LENGTH]) {
+    const struct mach_header_64 *mh = (const struct mach_header_64 *)_dyld_get_image_header(0);
+    if (!mh || mh->magic != MH_MAGIC_64) return -1;
+
+    // Hash the mach header + load commands (first 4KB is usually enough to catch most patches)
+    size_t header_size = sizeof(struct mach_header_64) + mh->sizeofcmds;
+    if (header_size > 8192) header_size = 8192;
+
+    CC_SHA256_CTX ctx;
+    CC_SHA256_Init(&ctx);
+    CC_SHA256_Update(&ctx, mh, (CC_LONG)header_size);
+
+    // Also include a slice of the first segment that looks like __TEXT
+    const uint8_t *base = (const uint8_t *)mh;
+    const struct load_command *lc = (const struct load_command *)(base + sizeof(struct mach_header_64));
+    for (uint32_t i = 0; i < mh->ncmds; i++) {
+        if (lc->cmd == LC_SEGMENT_64) {
+            const struct segment_command_64 *seg = (const struct segment_command_64 *)lc;
+            if (strncmp(seg->segname, "__TEXT", 16) == 0 && seg->filesize > 0) {
+                size_t slice = seg->filesize > 16384 ? 16384 : (size_t)seg->filesize;
+                CC_SHA256_Update(&ctx, base + seg->fileoff, (CC_LONG)slice);
+                break;
+            }
+        }
+        lc = (const struct load_command *)((const uint8_t *)lc + lc->cmdsize);
+    }
+
+    CC_SHA256_Final(out, &ctx);
+    return 0;
+}
+
+static void init_text_hash(void) {
+    if (g_text_hash_ready) return;
+    if (compute_text_hash(g_text_hash) == 0) {
+        g_text_hash_ready = 1;
+    }
+}
+
+static int text_hash_changed(void) {
+    if (!g_text_hash_ready) return 0;
+    unsigned char current[CC_SHA256_DIGEST_LENGTH];
+    if (compute_text_hash(current) != 0) return 0;
+    return memcmp(g_text_hash, current, CC_SHA256_DIGEST_LENGTH) != 0;
+}
+
+// ---------------------------------------------------------------------------
 // Public C API called from Swift
 // ---------------------------------------------------------------------------
 
@@ -166,19 +220,27 @@ int AD_isTampered(void) {
     if (parent_is_suspicious()) return 1;
     if (has_suspicious_dyld_image()) return 1;
     if (has_suspicious_env()) return 1;
-    // Path checks are softer (many legitimate paths can exist on some devices)
-    // so we only count them when combined with another signal would be better,
-    // but for now keep them as additional signal.
     if (has_suspicious_paths()) return 1;
+    if (text_hash_changed()) return 1;
     return 0;
 }
 
 /// Call as early as possible (init / +load style).
 void AD_applyEarlyProtections(void) {
     deny_debugger_attach();
+    init_text_hash();
+}
+
+/// Hard kill the process (used when critical integrity fails).
+void AD_killProcess(void) {
+    // Multiple ways so it is harder to nop out just one
+    kill(getpid(), SIGKILL);
+    _exit(1);
+    abort();
 }
 
 // Constructor — runs before main
 __attribute__((constructor)) static void AD_constructor(void) {
     deny_debugger_attach();
+    init_text_hash();
 }
