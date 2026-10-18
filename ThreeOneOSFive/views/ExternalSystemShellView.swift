@@ -466,17 +466,6 @@ private struct DeltaGameSelectorView: View {
                             languageButton("VN", value: AppLanguage.vietnamese.rawValue)
                         }
 
-                        Button {
-                            if let url = URL(string: "https://discord.gg/marceloruiz") {
-                                UIApplication.shared.open(url)
-                            }
-                        } label: {
-                            Label("Discord: discord.gg/marceloruiz", systemImage: "bubble.left.and.bubble.right.fill")
-                                .font(.caption2.weight(.semibold))
-                                .foregroundStyle(DeltaColors.purple)
-                                .padding(.top, 2)
-                        }
-                        .buttonStyle(.plain)
                     }
                     .padding(.horizontal, 18)
                     .padding(.bottom, 26)
@@ -1480,16 +1469,7 @@ private struct DeltaReferenceSettingsTab: View {
                 .padding(3).background(DeltaColors.line.opacity(0.18), in: Capsule())
             }
             DeltaCard {
-                DeltaSectionTitle(isVietnamese ? "HỖ TRỢ HỆ THỐNG" : "SUPPORT & SYSTEM", icon: "questionmark.circle.fill")
-                Button {
-                    if let url = URL(string: remoteConfig.config.discordUrl ?? "https://discord.gg/marceloruiz") {
-                        UIApplication.shared.open(url)
-                    }
-                } label: {
-                    DeltaActionRow(icon: "bubble.left.and.bubble.right.fill", title: isVietnamese ? "Liên hệ hỗ trợ (Discord)" : "Discord Support", color: DeltaColors.purple)
-                }
-                .buttonStyle(.plain)
-                Divider().overlay(DeltaColors.purple.opacity(0.10))
+                DeltaSectionTitle(isVietnamese ? "SISTEMA" : "SYSTEM", icon: "gearshape.fill")
                 Button { keySession.logout() } label: { DeltaActionRow(icon: "rectangle.portrait.and.arrow.right", title: isVietnamese ? "Đăng xuất tài khoản" : "Sign Out", color: .red) }.buttonStyle(.plain)
             }
         }

@@ -21,7 +21,6 @@ struct RemoteAppConfig: Codable {
     var brandName: String = "EXTERNAL SYSTEM"
     var subtitle: String = "PATCH CONTROL"
     var logoUrl: String?
-    var discordUrl: String?
     var supportUrl: String?
     var maintenance: RemoteMessage = .init()
     var announcement: RemoteMessage = .init()
@@ -41,7 +40,6 @@ struct RemoteAppConfig: Codable {
         brandName = try c.decodeIfPresent(String.self, forKey: .brandName) ?? brandName
         subtitle = try c.decodeIfPresent(String.self, forKey: .subtitle) ?? subtitle
         logoUrl = try c.decodeIfPresent(String.self, forKey: .logoUrl)
-        discordUrl = try c.decodeIfPresent(String.self, forKey: .discordUrl)
         supportUrl = try c.decodeIfPresent(String.self, forKey: .supportUrl)
         maintenance = try c.decodeIfPresent(RemoteMessage.self, forKey: .maintenance) ?? .init()
         announcement = try c.decodeIfPresent(RemoteMessage.self, forKey: .announcement) ?? .init()

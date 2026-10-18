@@ -36,8 +36,14 @@ enum PatchWorkspaceService {
     }
 
     static func patchesRootURL(fileManager: FileManager = .default) throws -> URL {
-        let documents = try documentsRootURL(fileManager: fileManager)
-        let root = documents
+        let support = try fileManager.url(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        )
+        let root = support
+            .appendingPathComponent("3105", isDirectory: true)
             .appendingPathComponent("Patches", isDirectory: true)
             .appendingPathComponent(storageNamespace(), isDirectory: true)
         try fileManager.createDirectory(at: root, withIntermediateDirectories: true)
@@ -45,8 +51,19 @@ enum PatchWorkspaceService {
     }
 
     static func patchesBaseRootURL(fileManager: FileManager = .default) throws -> URL {
-        try documentsRootURL(fileManager: fileManager)
+        try fileManager.url(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask,
+            appropriateFor: nil,
+            create: true
+        )
+            .appendingPathComponent("3105", isDirectory: true)
             .appendingPathComponent("Patches", isDirectory: true)
+    }
+
+    static func removeLegacyDocumentsPatchStorage(fileManager: FileManager = .default) {
+        guard let documents = try? documentsRootURL(fileManager: fileManager) else { return }
+        try? fileManager.removeItem(at: documents.appendingPathComponent("Patches", isDirectory: true))
     }
 
     static func createWorkspace(

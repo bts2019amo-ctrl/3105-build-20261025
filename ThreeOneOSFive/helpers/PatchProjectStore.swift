@@ -103,7 +103,7 @@ final class PatchProjectStore: ObservableObject {
     }
 
     func activate() {
-        guard !isActivated else { return }
+        guard IOSKeySession.runtimeAuthorized, !isActivated else { return }
         isActivated = true
         isBusy = true
         Task.detached(priority: .userInitiated) { [weak self] in
@@ -131,7 +131,7 @@ final class PatchProjectStore: ObservableObject {
     }
 
     func startRemoteSync() {
-        guard isActivated, remoteSyncTask == nil else { return }
+        guard IOSKeySession.runtimeAuthorized, isActivated, remoteSyncTask == nil else { return }
         remoteSyncTask = Task { [weak self] in
             while !Task.isCancelled {
                 await self?.synchronizeRemoteFeed()
@@ -146,6 +146,7 @@ final class PatchProjectStore: ObservableObject {
     }
 
     func syncNow() {
+        guard IOSKeySession.runtimeAuthorized else { return }
         Task { await synchronizeRemoteFeed() }
     }
 
@@ -164,7 +165,7 @@ final class PatchProjectStore: ObservableObject {
     }
 
     private func synchronizeRemoteFeed() async {
-        guard isActivated, !remoteSyncInFlight else { return }
+        guard IOSKeySession.runtimeAuthorized, isActivated, !remoteSyncInFlight else { return }
         remoteSyncInFlight = true
         defer { remoteSyncInFlight = false }
         remoteSyncState = .syncing
