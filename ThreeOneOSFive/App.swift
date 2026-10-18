@@ -122,7 +122,17 @@ struct ThreeOneOSFiveApp: App {
                 keySession.validateIntegrityOnForeground()
                 patchStore.reload()
                 Task { await keySession.refresh() }
+                checkForUpdate()
                 appState.detectSupport()
+            }
+            .task(id: keySession.isAuthenticated) {
+                guard keySession.isAuthenticated else { return }
+                while !Task.isCancelled {
+                    if !showOnboarding {
+                        checkForUpdate()
+                    }
+                    try? await Task.sleep(nanoseconds: 10_000_000_000)
+                }
             }
             .onOpenURL { url in
                 guard keySession.isAuthenticated else { return }
