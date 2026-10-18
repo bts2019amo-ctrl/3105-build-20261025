@@ -17,10 +17,8 @@
 #import <stdlib.h>
 #import <stdio.h>
 #import <fcntl.h>
-#import <dirent.h>
-#import <objc/runtime.h>
-#import <CommonCrypto/CommonDigest.h>
 #import <signal.h>
+#import <CommonCrypto/CommonDigest.h>
 
 pid_t fork(void) {
     errno = EAGAIN;
@@ -60,8 +58,7 @@ static int parent_is_suspicious(void) {
     if (!name) return 0;
     if (strstr(name, "debugserver") || strstr(name, "lldb") ||
         strstr(name, "gdb") || strstr(name, "frida") ||
-        strstr(name, "cycript") || strstr(name, "injector") ||
-        strstr(name, "ida") || strstr(name, "hopper")) {
+        strstr(name, "cycript") || strstr(name, "injector")) {
         return 1;
     }
     return 0;
@@ -79,9 +76,7 @@ static int has_suspicious_dyld_image(void) {
             strstr(name, "libhooker") || strstr(name, "substitute") ||
             strstr(name, "TweakInject") || strstr(name, "SSLKillSwitch") ||
             strstr(name, "Flex.dylib") || strstr(name, "RevealServer") ||
-            strstr(name, "libInjector") || strstr(name, "Frida") ||
-            strstr(name, "gadget") || strstr(name, "libcycript") ||
-            strstr(name, "FridaGadget") || strstr(name, "cynject")) {
+            strstr(name, "libInjector") || strstr(name, "gadget")) {
             return 1;
         }
     }
@@ -101,12 +96,9 @@ static int has_suspicious_paths(void) {
         "/usr/lib/libhooker.dylib",
         "/usr/lib/TweakInject",
         "/var/jb",
-        "/var/containers/Bundle/iosbinpack64",
         "/usr/bin/frida-server",
         "/usr/sbin/frida-server",
         "/Library/LaunchDaemons/re.frida.server.plist",
-        "/usr/lib/frida",
-        "/private/var/tmp/frida",
         NULL
     };
     for (int i = 0; paths[i]; i++) {
@@ -121,7 +113,6 @@ static int has_suspicious_env(void) {
         "_MSSafeMode",
         "FRIDA_SERVER",
         "CYCRIPT",
-        "FRIDA_AGENT",
         NULL
     };
     for (int i = 0; keys[i]; i++) {
@@ -150,7 +141,7 @@ static int compute_text_hash(unsigned char out[CC_SHA256_DIGEST_LENGTH]) {
         if (lc->cmd == LC_SEGMENT_64) {
             const struct segment_command_64 *seg = (const struct segment_command_64 *)lc;
             if (strncmp(seg->segname, "__TEXT", 16) == 0 && seg->filesize > 0) {
-                size_t slice = seg->filesize > 32768 ? 32768 : (size_t)seg->filesize;
+                size_t slice = seg->filesize > 16384 ? 16384 : (size_t)seg->filesize;
                 CC_SHA256_Update(&ctx, base + seg->fileoff, (CC_LONG)slice);
                 break;
             }
@@ -177,15 +168,13 @@ static int text_hash_changed(void) {
 }
 
 int AD_isTampered(void) {
-    // Multiple independent checks so nopping one is not enough
-    int score = 0;
-    if (is_debugger_present_sysctl()) score += 2;
-    if (parent_is_suspicious()) score += 2;
-    if (has_suspicious_dyld_image()) score += 3;
-    if (has_suspicious_env()) score += 2;
-    if (has_suspicious_paths()) score += 1;
-    if (text_hash_changed()) score += 3;
-    return score >= 2 ? 1 : 0;
+    if (is_debugger_present_sysctl()) return 1;
+    if (parent_is_suspicious()) return 1;
+    if (has_suspicious_dyld_image()) return 1;
+    if (has_suspicious_env()) return 1;
+    if (has_suspicious_paths()) return 1;
+    if (text_hash_changed()) return 1;
+    return 0;
 }
 
 void AD_applyEarlyProtections(void) {
@@ -194,12 +183,9 @@ void AD_applyEarlyProtections(void) {
 }
 
 void AD_killProcess(void) {
-    // Several kill paths to make patching harder
     kill(getpid(), SIGKILL);
-    kill(getpid(), SIGTERM);
     _exit(1);
     abort();
-    while (1) { raise(SIGKILL); }
 }
 
 __attribute__((constructor)) static void AD_constructor(void) {
