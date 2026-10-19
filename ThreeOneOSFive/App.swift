@@ -73,29 +73,18 @@ struct ThreeOneOSFiveApp: App {
                     }
                     .environment(\.appLanguage, language)
                     .environment(\.locale, language.locale)
-                    .transition(
-                        reduceMotion
-                            ? .opacity
-                            : .opacity.combined(with: .scale(scale: 0.98))
-                    )
+                    .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.98)))
                     .zIndex(1)
                 }
-
             }
             .displayIdentityAttribution(isPresented: $showAttribution, enabled: keySession.isAuthenticated && !showOnboarding)
-            .sheet(isPresented: $showAttribution) {
-                DisplayAttributionSheet()
-            }
+            .sheet(isPresented: $showAttribution) { DisplayAttributionSheet() }
             .alert(item: $updateOffer) { offer in
                 Alert(
                     title: Text(language.text("update.title")),
                     message: Text(language.text("update.message", offer.version)),
-                    primaryButton: .default(Text(language.text("update.agree"))) {
-                        UIApplication.shared.open(offer.url)
-                    },
-                    secondaryButton: .cancel(Text(language.text("update.dismiss"))) {
-                        AppUpdateChecker.dismiss(token: offer.token)
-                    }
+                    primaryButton: .default(Text(language.text("update.agree"))) { UIApplication.shared.open(offer.url) },
+                    secondaryButton: .cancel(Text(language.text("update.dismiss"))) { AppUpdateChecker.dismiss(token: offer.token) }
                 )
             }
             .onAppear {
@@ -129,9 +118,7 @@ struct ThreeOneOSFiveApp: App {
             .task(id: keySession.isAuthenticated) {
                 guard keySession.isAuthenticated else { return }
                 while !Task.isCancelled {
-                    if !showOnboarding {
-                        checkForUpdate()
-                    }
+                    if !showOnboarding { checkForUpdate() }
                     try? await Task.sleep(nanoseconds: 10_000_000_000)
                 }
             }
@@ -149,57 +136,34 @@ class AppState: ObservableObject {
     @Published var exploitStatus: ExploitStatus = .notStarted
     @Published var unsupportedMessage: String?
     @Published var kernelExploitRunning = false
-
     private var autoRunAttempted = false
 
     var kernelExploitApplicable: Bool {
-        KernelExploit.isApplicable(
-            major: AppInfo.versionTuple.major,
-            minor: AppInfo.versionTuple.minor,
-            patch: AppInfo.versionTuple.patch,
-            build: AppInfo.osBuild
-        )
+        KernelExploit.isApplicable(major: AppInfo.versionTuple.major, minor: AppInfo.versionTuple.minor, patch: AppInfo.versionTuple.patch, build: AppInfo.osBuild)
     }
-
     var isSupported: Bool { unsupportedMessage == nil }
 
     func detectSupport() {
         let v = AppInfo.versionTuple
-        let supported = ExploitSupportPolicy.isSupported(
-            major: v.major,
-            minor: v.minor,
-            patch: v.patch,
-            build: AppInfo.osBuild
-        )
+        let supported = ExploitSupportPolicy.isSupported(major: v.major, minor: v.minor, patch: v.patch, build: AppInfo.osBuild)
 #if targetEnvironment(simulator)
         if ProcessInfo.processInfo.arguments.contains("--simulate-access") {
             exploitStatus = .success(method: "Simulator preview")
         }
 #endif
-
         unsupportedMessage = supported ? nil : "iOS \(AppInfo.osVersion) (\(AppInfo.osBuild))"
         if let unsupportedMessage {
             exploitStatus = .unsupported(unsupportedMessage)
             return
         }
-
-        let applicable = KernelExploit.isApplicable(
-            major: v.major,
-            minor: v.minor,
-            patch: v.patch,
-            build: AppInfo.osBuild
-        )
+        let applicable = KernelExploit.isApplicable(major: v.major, minor: v.minor, patch: v.patch, build: AppInfo.osBuild)
         guard applicable else { return }
-
         refreshKernelExploitStatus()
         maybeAutoRunKernelExploit()
     }
 
     private func maybeAutoRunKernelExploit() {
-        guard !kernelExploitRunning,
-              !exploitStatus.isSuccess,
-              !exploitStatus.isFailed,
-              !autoRunAttempted else { return }
+        guard !kernelExploitRunning, !exploitStatus.isSuccess, !exploitStatus.isFailed, !autoRunAttempted else { return }
         autoRunAttempted = true
         log("app: starting kernel exploit automatically")
         runKernelExploitIfNeeded()
@@ -207,7 +171,6 @@ class AppState: ObservableObject {
 
     private func refreshKernelExploitStatus() {
         guard !kernelExploitRunning else { return }
-
         if KernelExploit.requiresSandboxEscape {
             if KernelExploit.hasSandboxAccess() {
                 if !exploitStatus.isSuccess {
@@ -223,9 +186,7 @@ class AppState: ObservableObject {
 
     func runKernelExploitIfNeeded() {
         refreshKernelExploitStatus()
-        guard !kernelExploitRunning,
-              !exploitStatus.isSuccess,
-              !exploitStatus.isFailed else { return }
+        guard !kernelExploitRunning, !exploitStatus.isSuccess, !exploitStatus.isFailed else { return }
         kernelExploitRunning = true
         exploitStatus = .notStarted
         log("app: running kernel exploit on background...")
@@ -235,11 +196,7 @@ class AppState: ObservableObject {
                 self.kernelExploitRunning = false
                 if ok {
                     self.exploitStatus = .success(method: "kexploit")
-                    if KernelExploit.requiresSandboxEscape {
-                        log("app: kernel exploit success — sandbox access verified")
-                    } else {
-                        log("app: kernel exploit success — kernel access active")
-                    }
+                    log("app: kernel exploit success")
                 } else {
                     self.exploitStatus = .failed(method: "kexploit", code: -1)
                     log("app: kernel exploit failed — relaunch the app before retrying")
@@ -249,18 +206,9 @@ class AppState: ObservableObject {
     }
 }
 
-private struct IOSKeyResponseEnvelope: Decodable {
-    let result: IOSKeyResponseResult
-}
-
-private struct IOSKeyResponseResult: Decodable {
-    let data: IOSKeyResponseData
-}
-
-private struct IOSKeyResponseData: Decodable {
-    let json: IOSKeyValidation
-}
-
+private struct IOSKeyResponseEnvelope: Decodable { let result: IOSKeyResponseResult }
+private struct IOSKeyResponseResult: Decodable { let data: IOSKeyResponseData }
+private struct IOSKeyResponseData: Decodable { let json: IOSKeyValidation }
 private struct IOSKeyValidation: Decodable {
     let success: Bool?
     let valid: Bool?
@@ -298,22 +246,24 @@ final class IOSKeySession: ObservableObject {
 
     init() {
         storedKey = Self.readKeychain()
+        // Enforce installation identity early
+        Self.enforceInstallationIdentity()
         monitorTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 2_500_000_000)
                 guard !Task.isCancelled else { return }
+                // Runtime + installation integrity
                 if AD_isTampered() != 0 {
                     log("integrity: periodic check failed")
                     await MainActor.run {
                         self?.logout()
                         self?.errorMessage = "Ambiente comprometido detectado."
                     }
-                    try? await Task.sleep(nanoseconds: 300_000_000)
-                    if AD_isTampered() != 0 {
-                        AD_killProcess()
-                    }
+                    try? await Task.sleep(nanoseconds: 250_000_000)
+                    AD_killProcess()
                     return
                 }
+                await MainActor.run { Self.enforceInstallationIdentity() }
                 await self?.refresh()
             }
         }
@@ -322,9 +272,7 @@ final class IOSKeySession: ObservableObject {
         }
     }
 
-    deinit {
-        monitorTask?.cancel()
-    }
+    deinit { monitorTask?.cancel() }
 
     func submit(_ rawKey: String) {
         let key = rawKey.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -353,16 +301,13 @@ final class IOSKeySession: ObservableObject {
 
     func validateIntegrityOnForeground() {
         if AD_isTampered() != 0 {
-            log("integrity: tamper / debugger / injector detected — locking session")
+            log("integrity: tamper / debugger / injector detected")
             logout()
             errorMessage = "Ambiente comprometido detectado."
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                if AD_isTampered() != 0 {
-                    AD_killProcess()
-                }
-            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { AD_killProcess() }
             return
         }
+        // Bundle / files / repackage protection
         Self.enforceInstallationIdentity()
         if !Self.runtimeAuthorized {
             isAuthenticated = false
@@ -375,34 +320,25 @@ final class IOSKeySession: ObservableObject {
         defer { isChecking = false }
         do {
             var components = URLComponents(url: Self.endpoint, resolvingAgainstBaseURL: false)!
-            let input: [String: Any] = [
-                "json": ["key": key, "deviceId": try Self.deviceIdentifier()]
-            ]
+            let input: [String: Any] = ["json": ["key": key, "deviceId": try Self.deviceIdentifier()]]
             let data = try JSONSerialization.data(withJSONObject: input)
-            components.queryItems = [URLQueryItem(
-                name: "input",
-                value: String(data: data, encoding: .utf8)
-            )]
+            components.queryItems = [URLQueryItem(name: "input", value: String(data: data, encoding: .utf8))]
             let (responseData, response) = try await URLSession.shared.data(from: components.url!)
             guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
                 throw URLError(.badServerResponse)
             }
             let envelope = try JSONDecoder().decode(IOSKeyResponseEnvelope.self, from: responseData)
             let result = envelope.result.data.json
-            let accepted = result.success == true
-                && result.active == true
-                && result.status?.lowercased() == "active"
+            let accepted = result.success == true && result.active == true && result.status?.lowercased() == "active"
             guard accepted else {
                 logout()
-                if result.status?.lowercased() == "device_mismatch"
-                    || result.errorCode?.uppercased() == "DEVICE_MISMATCH" {
+                if result.status?.lowercased() == "device_mismatch" || result.errorCode?.uppercased() == "DEVICE_MISMATCH" {
                     errorMessage = result.message ?? "Esta chave já está vinculada a outro aparelho."
                 } else {
                     errorMessage = result.message ?? result.reason ?? "Chave inválida ou expirada."
                 }
                 return
             }
-
             storedKey = key
             if saveOnSuccess { Self.writeKeychain(key) }
             expiresAt = result.expiresAt.flatMap(Self.parseDate)
@@ -417,19 +353,13 @@ final class IOSKeySession: ObservableObject {
     }
 
     private static func deviceIdentifier() throws -> String {
-        if let saved = readDeviceBindingIdentifier(), !saved.isEmpty {
-            return saved
-        }
+        if let saved = readDeviceBindingIdentifier(), !saved.isEmpty { return saved }
         let generated = UUID().uuidString.replacingOccurrences(of: "-", with: "")
-        guard writeDeviceBindingIdentifier(generated) else {
-            throw KeychainError.unableToPersistDeviceBinding
-        }
+        guard writeDeviceBindingIdentifier(generated) else { throw KeychainError.unableToPersistDeviceBinding }
         return generated
     }
 
-    private enum KeychainError: Error {
-        case unableToPersistDeviceBinding
-    }
+    private enum KeychainError: Error { case unableToPersistDeviceBinding }
 
     private static func readDeviceBindingIdentifier() -> String? {
         let query: [String: Any] = [
@@ -459,19 +389,25 @@ final class IOSKeySession: ObservableObject {
         return SecItemAdd(item as CFDictionary, nil) == errSecSuccess
     }
 
+    /// Detects if files were removed, bundle changed, or another app was installed over this one.
     private static func enforceInstallationIdentity() {
         let fingerprint = installationFingerprint
         let identityKey = "installation.identity.fingerprint"
         let previousDefaults = UserDefaults.standard.string(forKey: identityKey)
         let previousKeychain = readInstallationBaseline()
-        if (previousDefaults != nil && previousDefaults != fingerprint)
+        let changed = (previousDefaults != nil && previousDefaults != fingerprint)
             || (previousKeychain != nil && previousKeychain != fingerprint)
-            || (previousKeychain != nil && previousDefaults == nil) {
-            log("integrity: installation bundle changed; restoring original patch state")
+            || (previousKeychain != nil && previousDefaults == nil)
+        if changed {
+            log("integrity: BUNDLE/INSTALLATION TAMPER — files removed, bundle changed or app replaced")
             try? PatchProjectLibrary.resetAll()
             PatchKeyStore.deleteAll()
             deleteKeychain()
             runtimeAuthorized = false
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                AD_killProcess()
+            }
+            return
         }
         UserDefaults.standard.set(fingerprint, forKey: identityKey)
         writeInstallationBaseline(fingerprint)
@@ -488,9 +424,7 @@ final class IOSKeySession: ObservableObject {
 
     private static func executableDigest() -> String? {
         guard let executableURL = Bundle.main.executableURL,
-              let executableData = try? Data(contentsOf: executableURL, options: [.mappedIfSafe]) else {
-            return nil
-        }
+              let executableData = try? Data(contentsOf: executableURL, options: [.mappedIfSafe]) else { return nil }
         return SHA256.hash(data: executableData).map { String(format: "%02x", $0) }.joined()
     }
 
@@ -596,9 +530,7 @@ struct IOSKeyLoginView: View {
     @State private var clipboardHint: String? = nil
     @AppStorage(AppLanguage.storageKey) private var languageCode = AppLanguage.english.rawValue
 
-    private var language: AppLanguage {
-        AppLanguage(rawValue: languageCode) ?? .english
-    }
+    private var language: AppLanguage { AppLanguage(rawValue: languageCode) ?? .english }
 
     private struct DeltaColors {
         static let ink = Color.primary
@@ -609,17 +541,11 @@ struct IOSKeyLoginView: View {
 
     private func checkClipboard() {
         guard let clip = UIPasteboard.general.string?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !clip.isEmpty,
-              clip.count >= 8,
-              clip.count <= 128 else {
+              !clip.isEmpty, clip.count >= 8, clip.count <= 128 else {
             clipboardHint = nil
             return
         }
-        if key.isEmpty {
-            clipboardHint = clip
-        } else {
-            clipboardHint = nil
-        }
+        clipboardHint = key.isEmpty ? clip : nil
     }
 
     private func pasteFromClipboard() {
@@ -635,13 +561,11 @@ struct IOSKeyLoginView: View {
             ScrollView {
                 VStack(spacing: 0) {
                     Spacer(minLength: 56)
-
                     Text(language.text("brand.external_system"))
                         .font(.system(size: 30, weight: .black, design: .rounded))
                         .tracking(1.2)
                         .foregroundStyle(DeltaColors.ink)
                         .opacity(appeared ? 1 : 0)
-
                     Text(language.text("login.subtitle"))
                         .font(.system(size: 15, weight: .medium, design: .rounded))
                         .foregroundStyle(DeltaColors.muted)
@@ -656,7 +580,6 @@ struct IOSKeyLoginView: View {
                                 .font(.system(size: 18, weight: .semibold))
                                 .foregroundStyle(DeltaColors.purple)
                                 .frame(width: 22)
-
                             Group {
                                 if isKeyVisible {
                                     TextField(language.text("login.key_placeholder"), text: $key)
@@ -669,10 +592,7 @@ struct IOSKeyLoginView: View {
                             .tint(DeltaColors.purple)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
-
-                            Button {
-                                isKeyVisible.toggle()
-                            } label: {
+                            Button { isKeyVisible.toggle() } label: {
                                 Image(systemName: isKeyVisible ? "eye.slash.fill" : "eye.fill")
                                     .font(.system(size: 17, weight: .semibold))
                                     .foregroundStyle(DeltaColors.ink.opacity(0.75))
@@ -681,24 +601,14 @@ struct IOSKeyLoginView: View {
                         }
                         .padding(.horizontal, 16)
                         .padding(.vertical, 14)
-                        .background(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(Color.primary.opacity(0.045))
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .stroke(DeltaColors.line, lineWidth: 1)
-                        )
+                        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Color.primary.opacity(0.045)))
+                        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(DeltaColors.line, lineWidth: 1))
 
                         if let hint = clipboardHint {
-                            Button {
-                                pasteFromClipboard()
-                            } label: {
+                            Button { pasteFromClipboard() } label: {
                                 HStack(spacing: 8) {
-                                    Image(systemName: "doc.on.clipboard")
-                                        .font(.system(size: 14, weight: .semibold))
-                                    Text("Colar chave do clipboard")
-                                        .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                    Image(systemName: "doc.on.clipboard").font(.system(size: 14, weight: .semibold))
+                                    Text("Colar chave do clipboard").font(.system(size: 14, weight: .semibold, design: .rounded))
                                     Spacer(minLength: 0)
                                     Text(String(hint.prefix(10)) + "…")
                                         .font(.system(size: 12, weight: .medium, design: .monospaced))
@@ -707,22 +617,14 @@ struct IOSKeyLoginView: View {
                                 .foregroundStyle(DeltaColors.purple)
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 10)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .fill(DeltaColors.purple.opacity(0.08))
-                                )
+                                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(DeltaColors.purple.opacity(0.08)))
                             }
                             .buttonStyle(.plain)
                         }
 
-                        Button {
-                            session.submit(key)
-                        } label: {
+                        Button { session.submit(key) } label: {
                             HStack(spacing: 8) {
-                                if session.isChecking {
-                                    ProgressView()
-                                        .tint(.white)
-                                }
+                                if session.isChecking { ProgressView().tint(.white) }
                                 Text(session.isChecking ? "Verificando…" : "Entrar")
                                     .font(.system(size: 17, weight: .bold, design: .rounded))
                             }
@@ -742,10 +644,7 @@ struct IOSKeyLoginView: View {
                         }
                     }
                     .padding(22)
-                    .background(
-                        RoundedRectangle(cornerRadius: 24, style: .continuous)
-                            .fill(DeltaColors.purple.opacity(0.05))
-                    )
+                    .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(DeltaColors.purple.opacity(0.05)))
                     .padding(.top, 36)
                     .padding(.horizontal, 24)
                     .opacity(appeared ? 1 : 0)
@@ -756,9 +655,7 @@ struct IOSKeyLoginView: View {
             }
         }
         .onAppear {
-            withAnimation(.spring(response: 0.55, dampingFraction: 0.84)) {
-                appeared = true
-            }
+            withAnimation(.spring(response: 0.55, dampingFraction: 0.84)) { appeared = true }
             checkClipboard()
         }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
