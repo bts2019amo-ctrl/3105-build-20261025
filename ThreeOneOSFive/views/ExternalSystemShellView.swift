@@ -74,7 +74,7 @@ struct ExternalSystemShellView: View {
                     .overlay {
                         VStack(spacing: 14) {
                             Image(systemName: "wrench.and.screwdriver.fill").font(.system(size: 34, weight: .bold)).foregroundStyle(.white)
-                            Text(remoteConfig.config.maintenance.title.isEmpty ? "Em manuten\u00e7\u00e3o" : remoteConfig.config.maintenance.title).font(.title2.weight(.bold)).foregroundStyle(.white)
+                            Text(remoteConfig.config.maintenance.title.isEmpty ? "Em manuten\u{00e7}\u{00e3}o" : remoteConfig.config.maintenance.title).font(.title2.weight(.bold)).foregroundStyle(.white)
                             Text(remoteConfig.config.maintenance.message).multilineTextAlignment(.center).foregroundStyle(.white.opacity(0.7))
                         }.padding(32)
                     }.zIndex(30)
@@ -85,7 +85,7 @@ struct ExternalSystemShellView: View {
                     .overlay {
                         VStack(spacing: 10) {
                             Image(systemName: "eye.slash.fill").font(.system(size: 28, weight: .bold))
-                            Text(isVietnamese ? "Conte\u00fado protegido" : "Protected content").font(.headline.weight(.bold))
+                            Text(isVietnamese ? "Conte\u{00fa}do protegido" : "Protected content").font(.headline.weight(.bold))
                         }.foregroundStyle(.white)
                     }.transition(.opacity).zIndex(20)
             }
@@ -276,7 +276,7 @@ private struct ExerHomeTab: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
             VStack(alignment: .leading, spacing: 6) {
-                Text(selectedGame == .freeFire ? "FREE FIRE \u00b7 READY" : "FREE FIRE MAX \u00b7 READY").font(.system(size: 11, weight: .bold)).foregroundStyle(.white.opacity(0.45))
+                Text(selectedGame == .freeFire ? "FREE FIRE \u{00b7} READY" : "FREE FIRE MAX \u{00b7} READY").font(.system(size: 11, weight: .bold)).foregroundStyle(.white.opacity(0.45))
                 Text("Choose option").font(.system(size: 22, weight: .bold)).foregroundStyle(.white)
                 Text("No option selected").font(.system(size: 13)).foregroundStyle(.white.opacity(0.4))
             }
@@ -285,7 +285,7 @@ private struct ExerHomeTab: View {
 
             sectionHeader("CACHE")
             VStack(spacing: 0) {
-                if cacheItems.isEmpty { emptyRow("Nenhum cache dispon\u00edvel") }
+                if cacheItems.isEmpty { emptyRow("Nenhum cache dispon\u{00ed}vel") }
                 else {
                     ForEach(Array(cacheItems.enumerated()), id: \.element.id) { index, item in
                         toggleRow(title: PatchProjectLibrary.displayName(for: item), isOn: isApplied(item), isLast: index == cacheItems.count - 1) {
@@ -297,7 +297,7 @@ private struct ExerHomeTab: View {
 
             sectionHeader("AVATAR")
             VStack(spacing: 0) {
-                if avatarItems.isEmpty { emptyRow("Nenhum avatar dispon\u00edvel") }
+                if avatarItems.isEmpty { emptyRow("Nenhum avatar dispon\u{00ed}vel") }
                 else {
                     ForEach(Array(avatarItems.enumerated()), id: \.element.id) { index, item in
                         toggleRow(title: PatchProjectLibrary.displayName(for: item), isOn: isApplied(item), isLast: index == avatarItems.count - 1) {
@@ -349,7 +349,7 @@ private struct ExerSkinTab: View {
             }
             VStack(spacing: 0) {
                 if skinItems.isEmpty {
-                    Text("Nenhuma skin dispon\u00edvel").font(.system(size: 14)).foregroundStyle(.white.opacity(0.35)).frame(maxWidth: .infinity, alignment: .leading).padding(18)
+                    Text("Nenhuma skin dispon\u{00ed}vel").font(.system(size: 14)).foregroundStyle(.white.opacity(0.35)).frame(maxWidth: .infinity, alignment: .leading).padding(18)
                 } else {
                     ForEach(Array(skinItems.enumerated()), id: \.element.id) { index, item in
                         Button {
@@ -360,7 +360,7 @@ private struct ExerSkinTab: View {
                                     .overlay { Image(systemName: "tshirt.fill").font(.system(size: 16)).foregroundStyle(.white.opacity(0.5)) }
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(PatchProjectLibrary.displayName(for: item)).font(.system(size: 14, weight: .semibold)).foregroundStyle(.white).lineLimit(1)
-                                    Text(selectedCharacter + " \u00b7 Free Fire").font(.system(size: 11)).foregroundStyle(.white.opacity(0.4))
+                                    Text(selectedCharacter + " \u{00b7} Free Fire").font(.system(size: 11)).foregroundStyle(.white.opacity(0.4))
                                 }
                                 Spacer()
                                 if isApplied(item) { Image(systemName: "checkmark.circle.fill").foregroundStyle(.white) }
@@ -424,7 +424,7 @@ private struct ExerExternalTab: View {
             Text("EXTERNAL").font(.system(size: 12, weight: .bold)).foregroundStyle(.white.opacity(0.4)).tracking(1.0).padding(.top, 4)
             VStack(spacing: 0) {
                 if externalItems.isEmpty {
-                    Text("Nenhum external dispon\u00edvel").font(.system(size: 14)).foregroundStyle(.white.opacity(0.35)).frame(maxWidth: .infinity, alignment: .leading).padding(18)
+                    Text("Nenhum external dispon\u{00ed}vel").font(.system(size: 14)).foregroundStyle(.white.opacity(0.35)).frame(maxWidth: .infinity, alignment: .leading).padding(18)
                 } else {
                     ForEach(Array(externalItems.enumerated()), id: \.element.id) { index, item in
                         Button {
@@ -501,10 +501,10 @@ private struct DeltaGameSelectorView: View {
             VStack(spacing: 0) {
                 Spacer()
                 Text("EXER CHEAT").font(.system(size: 28, weight: .black, design: .rounded)).tracking(2).foregroundStyle(.white)
-                Text(isVietnamese ? "Ch\u1ecdn game" : "Select target game").font(.subheadline).foregroundStyle(.white.opacity(0.5)).padding(.top, 6).padding(.bottom, 30)
+                Text(isVietnamese ? "Ch\u{1ecd}n game" : "Select target game").font(.subheadline).foregroundStyle(.white.opacity(0.5)).padding(.top, 6).padding(.bottom, 30)
                 VStack(spacing: 12) { gameRow(.freeFire); gameRow(.freeFireMax) }.padding(.horizontal, 24)
                 Button(action: onEnter) {
-                    Text(isVietnamese ? "V\u00c0O" : "ENTER").font(.system(size: 15, weight: .bold)).foregroundStyle(.black).frame(maxWidth: .infinity).frame(height: 52).background(Color.white, in: Capsule())
+                    Text(isVietnamese ? "V\u{00c0}O" : "ENTER").font(.system(size: 15, weight: .bold)).foregroundStyle(.black).frame(maxWidth: .infinity).frame(height: 52).background(Color.white, in: Capsule())
                 }.buttonStyle(.plain).padding(.horizontal, 24).padding(.top, 28)
                 Spacer()
             }
@@ -535,9 +535,9 @@ private struct DeltaAnnouncementView: View {
             Color.black.opacity(0.7).ignoresSafeArea()
             VStack(spacing: 16) {
                 Text(config.brandName.isEmpty ? "EXER CHEAT" : config.brandName).font(.system(size: 22, weight: .black)).foregroundStyle(.white)
-                Text(config.announcement.message.isEmpty ? (isVietnamese ? "Ch\u00e0o m\u1eebng!" : "Welcome!") : config.announcement.message).font(.subheadline).foregroundStyle(.white.opacity(0.7)).multilineTextAlignment(.center)
+                Text(config.announcement.message.isEmpty ? (isVietnamese ? "Ch\u{00e0}o m\u{1eeb}ng!" : "Welcome!") : config.announcement.message).font(.subheadline).foregroundStyle(.white.opacity(0.7)).multilineTextAlignment(.center)
                 Button(action: dismiss) {
-                    Text(isVietnamese ? "Ti\u1ebfp t\u1ee5c" : "Continue").font(.system(size: 14, weight: .bold)).foregroundStyle(.black).frame(maxWidth: .infinity).frame(height: 46).background(Color.white, in: Capsule())
+                    Text(isVietnamese ? "Ti\u{1ebf}p t\u{1ee5}c" : "Continue").font(.system(size: 14, weight: .bold)).foregroundStyle(.black).frame(maxWidth: .infinity).frame(height: 46).background(Color.white, in: Capsule())
                 }.buttonStyle(.plain)
             }.padding(28).background(Color(white: 0.1), in: RoundedRectangle(cornerRadius: 22, style: .continuous)).padding(32)
         }
