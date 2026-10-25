@@ -76,7 +76,7 @@ struct ExternalSystemShellView: View {
                             Image(systemName: "wrench.and.screwdriver.fill")
                                 .font(.system(size: 34, weight: .bold))
                                 .foregroundStyle(.white)
-                            Text(remoteConfig.config.maintenance.title.isEmpty ? "Em manuten\u00e7\u00e3o" : remoteConfig.config.maintenance.title)
+                            Text(verbatim: remoteConfig.config.maintenance.title.isEmpty ? "Em manuten\u{00e7}\u{00e3}o" : remoteConfig.config.maintenance.title)
                                 .font(.title2.weight(.bold))
                                 .foregroundStyle(.white)
                             Text(remoteConfig.config.maintenance.message)
@@ -94,7 +94,7 @@ struct ExternalSystemShellView: View {
                         VStack(spacing: 10) {
                             Image(systemName: "eye.slash.fill")
                                 .font(.system(size: 28, weight: .bold))
-                            Text(isVietnamese ? "Conte\u00fado protegido" : "Protected content")
+                            Text(isVietnamese ? "Conte\u{00fa}do protegido" : "Protected content")
                                 .font(.headline.weight(.bold))
                         }
                         .foregroundStyle(.white)
@@ -312,7 +312,7 @@ private struct ExerHomeTab: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             VStack(alignment: .leading, spacing: 5) {
-                Text(selectedGame == .freeFire ? "FREE FIRE \u00b7 READY" : "FREE FIRE MAX \u00b7 READY")
+                Text(selectedGame == .freeFire ? "FREE FIRE \u{00b7} READY" : "FREE FIRE MAX \u{00b7} READY")
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(.white.opacity(0.40))
                 Text("Choose option")
@@ -347,7 +347,7 @@ private struct ExerHomeTab: View {
     private func optionList(items: [PatchLibraryItem]) -> some View {
         VStack(spacing: 8) {
             if items.isEmpty {
-                Text("Nenhum item dispon\u00edvel")
+                Text("Nenhum item dispon\u{00ed}vel")
                     .font(.system(size: 14))
                     .foregroundStyle(.white.opacity(0.30))
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -430,7 +430,7 @@ private struct ExerSkinTab: View {
 
             VStack(spacing: 8) {
                 if skinItems.isEmpty {
-                    Text("Nenhuma skin dispon\u00edvel")
+                    Text("Nenhuma skin dispon\u{00ed}vel")
                         .font(.system(size: 14))
                         .foregroundStyle(.white.opacity(0.30))
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -452,7 +452,7 @@ private struct ExerSkinTab: View {
                                     .font(.system(size: 14, weight: .semibold))
                                     .foregroundStyle(.white)
                                     .lineLimit(1)
-                                Text("\(selectedCharacter) \u00b7 Free Fire")
+                                Text("\(selectedCharacter) \u{00b7} Free Fire")
                                     .font(.system(size: 11))
                                     .foregroundStyle(.white.opacity(0.38))
                             }
@@ -633,7 +633,7 @@ private struct DeltaGameSelectorView: View {
                     .foregroundStyle(.white)
                     .opacity(appear ? 1 : 0)
                     .offset(y: appear ? 0 : 12)
-                Text(isVietnamese ? "Ch\u1ecdn game" : "Select target game")
+                Text(isVietnamese ? "Ch\u{1ecd}n game" : "Select target game")
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.45))
                     .padding(.top, 8).padding(.bottom, 32)
@@ -646,7 +646,7 @@ private struct DeltaGameSelectorView: View {
                 .opacity(appear ? 1 : 0)
                 .offset(y: appear ? 0 : 16)
                 Button(action: onEnter) {
-                    Text(isVietnamese ? "V\u00c0O" : "ENTER")
+                    Text(isVietnamese ? "V\u{00c0}O" : "ENTER")
                         .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(.black)
                         .frame(maxWidth: .infinity)
@@ -709,12 +709,12 @@ private struct DeltaAnnouncementView: View {
                 Text(config.brandName.isEmpty ? "EXTERNAL SYSTEM" : config.brandName)
                     .font(.system(size: 22, weight: .black))
                     .foregroundStyle(.white)
-                Text(config.announcement.message.isEmpty ? (isVietnamese ? "Ch\u00e0o m\u1eebng!" : "Welcome!") : config.announcement.message)
+                Text(verbatim: config.announcement.message.isEmpty ? (isVietnamese ? "Ch\u{00e0}o m\u{1eeb}ng!" : "Welcome!") : config.announcement.message)
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.7))
                     .multilineTextAlignment(.center)
                 Button(action: dismiss) {
-                    Text(isVietnamese ? "Ti\u1ebfp t\u1ee5c" : "Continue")
+                    Text(isVietnamese ? "Ti\u{1ebf}p t\u{1ee5}c" : "Continue")
                         .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(.black)
                         .frame(maxWidth: .infinity)
