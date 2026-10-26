@@ -326,12 +326,12 @@ private struct ExerBottomBar: View {
     }
 }
 
-// MARK: - HOME (checkbox style like video)
+// MARK: - HOME (checkbox style — apply/restore like Skin)
 
 private struct ExerHomeTab: View {
     @EnvironmentObject private var patchStore: PatchProjectStore
     let selectedGame: DeltaGame
-    @State private var onIDs: Set<UUID> = []
+    @State private var refreshTick = 0
 
     private var cacheItems: [PatchLibraryItem] { items(for: .cache) }
     private var avatarItems: [PatchLibraryItem] { items(for: .avatar) }
@@ -344,12 +344,12 @@ private struct ExerHomeTab: View {
         }
     }
 
-    private func hasReceipt(_ item: PatchLibraryItem) -> Bool {
+    private func isApplied(_ item: PatchLibraryItem) -> Bool {
         DevicePatchService.latestReceipt(projectID: item.id) != nil
     }
 
-    private func syncFromReceipts() {
-        onIDs = Set((cacheItems + avatarItems).filter(hasReceipt).map(\.id))
+    private var activeCount: Int {
+        (cacheItems + avatarItems).filter(isApplied).count
     }
 
     var body: some View {
@@ -361,7 +361,7 @@ private struct ExerHomeTab: View {
                 Text("Choose option")
                     .font(.system(size: 20, weight: .bold))
                     .foregroundStyle(.white)
-                Text(onIDs.isEmpty ? "No option selected" : "\(onIDs.count) active")
+                Text(activeCount == 0 ? "No option selected" : "\(activeCount) active")
                     .font(.system(size: 13))
                     .foregroundStyle(.white.opacity(0.35))
             }
@@ -376,10 +376,12 @@ private struct ExerHomeTab: View {
             optionList(items: avatarItems)
         }
         .padding(.top, 2)
-        .onAppear { syncFromReceipts() }
-        .onChange(of: patchStore.items.map(\.id)) { _ in syncFromReceipts() }
+        .id(refreshTick)
         .onChange(of: patchStore.isBusy) { busy in
-            if !busy { syncFromReceipts() }
+            if !busy { refreshTick += 1 }
+        }
+        .onChange(of: patchStore.items.map(\.id)) { _ in
+            refreshTick += 1
         }
         .alert(item: Binding(
             get: { patchStore.alert },
@@ -415,7 +417,8 @@ private struct ExerHomeTab: View {
                 ForEach(items, id: \.id) { item in
                     checkboxRow(
                         title: PatchProjectLibrary.displayName(for: item),
-                        isOn: onIDs.contains(item.id)
+                        isOn: isApplied(item),
+                        disabled: patchStore.isBusy
                     ) {
                         toggle(item)
                     }
@@ -425,20 +428,17 @@ private struct ExerHomeTab: View {
     }
 
     private func toggle(_ item: PatchLibraryItem) {
-        if onIDs.contains(item.id) {
-            onIDs.remove(item.id)
+        guard !patchStore.isBusy else { return }
+        if isApplied(item) {
             patchStore.restoreInline(item)
+        } else if item.isLocked {
+            patchStore.requestUnlock(for: item)
         } else {
-            onIDs.insert(item.id)
-            if item.isLocked {
-                patchStore.requestUnlock(for: item)
-            } else {
-                patchStore.applyInline(item)
-            }
+            patchStore.applyInline(item)
         }
     }
 
-    private func checkboxRow(title: String, isOn: Bool, action: @escaping () -> Void) -> some View {
+    private func checkboxRow(title: String, isOn: Bool, disabled: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 14) {
                 ZStack {
@@ -453,17 +453,24 @@ private struct ExerHomeTab: View {
                 }
                 Text(title)
                     .font(.system(size: 14.5, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.92))
+                    .foregroundStyle(.white.opacity(disabled ? 0.45 : 0.92))
                     .lineLimit(1)
                 Spacer(minLength: 0)
+                if disabled {
+                    ProgressView()
+                        .scaleEffect(0.7)
+                        .tint(.white.opacity(0.6))
+                }
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 14)
             .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
             .background(Color(white: 0.09), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             .contentShape(Rectangle())
+            .opacity(disabled ? 0.75 : 1)
         }
         .buttonStyle(.plain)
+        .disabled(disabled)
     }
 }
 
@@ -522,34 +529,20 @@ private struct ExerSkinTab: View {
                                     .fill(Color(white: 0.14))
                                     .frame(width: 42, height: 42)
                                     .overlay {
-                                        Image(systemName: "tshirt.fill")
-                                            .font(.system(size: 15))
-                                            .foregroundStyle(.white.opacity(0.45))
+                                        Image(systemName: isApplied(item) ? "checkmark.circle.fill" : "tshirt.fill")
+                                            .font(.system(size: 18))
+                                            .foregroundStyle(isApplied(item) ? .white : .white.opacity(0.5))
                                     }
-
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(PatchProjectLibrary.displayName(for: item))
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundStyle(.white)
+                                        .font(.system(size: 14.5, weight: .medium))
+                                        .foregroundStyle(.white.opacity(0.92))
                                         .lineLimit(1)
-                                    Text("\(selectedCharacter) · Free Fire")
+                                    Text(isApplied(item) ? "Aplicado · toque para restaurar" : "Toque para aplicar")
                                         .font(.system(size: 11))
-                                        .foregroundStyle(.white.opacity(0.38))
+                                        .foregroundStyle(.white.opacity(0.35))
                                 }
-
-                                Spacer()
-
-                                // Square checkbox
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                        .stroke(isApplied(item) ? Color.white : Color.white.opacity(0.28), lineWidth: 1.6)
-                                        .frame(width: 22, height: 22)
-                                    if isApplied(item) {
-                                        RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                            .fill(Color.white)
-                                            .frame(width: 14, height: 14)
-                                    }
-                                }
+                                Spacer(minLength: 0)
                             }
                             .padding(.horizontal, 14)
                             .padding(.vertical, 12)
@@ -557,6 +550,7 @@ private struct ExerSkinTab: View {
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
+                        .disabled(patchStore.isBusy)
                     }
                 }
             }
@@ -575,6 +569,7 @@ private struct ExerSkinTab: View {
             }
             .buttonStyle(.plain)
             .padding(.top, 6)
+            .disabled(patchStore.isBusy)
         }
         .padding(.top, 2)
     }
@@ -723,23 +718,22 @@ private struct DeltaGameSelectorView: View {
                     .offset(y: appear ? 0 : 12)
 
                 Text(isVietnamese ? "Chọn game" : "Select target game")
-                    .font(.subheadline)
+                    .font(.subheadline.weight(.medium))
                     .foregroundStyle(.white.opacity(0.45))
                     .padding(.top, 8)
-                    .padding(.bottom, 32)
                     .opacity(appear ? 1 : 0)
 
                 VStack(spacing: 12) {
                     gameRow(.freeFire)
                     gameRow(.freeFireMax)
                 }
+                .padding(.top, 36)
                 .padding(.horizontal, 24)
                 .opacity(appear ? 1 : 0)
-                .offset(y: appear ? 0 : 16)
 
                 Button(action: onEnter) {
-                    Text(isVietnamese ? "VÀO" : "ENTER")
-                        .font(.system(size: 15, weight: .bold))
+                    Text(isVietnamese ? "Continuar" : "Continue")
+                        .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(.black)
                         .frame(maxWidth: .infinity)
                         .frame(height: 52)
@@ -754,19 +748,19 @@ private struct DeltaGameSelectorView: View {
             }
         }
         .onAppear {
-            withAnimation(.easeOut(duration: 0.55)) { appear = true }
+            withAnimation(.easeOut(duration: 0.5)) { appear = true }
         }
     }
 
     private func gameRow(_ game: DeltaGame) -> some View {
         Button {
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) { selectedGame = game }
+            selectedGame = game
         } label: {
-            HStack {
+            HStack(spacing: 14) {
                 Image(game == .freeFire ? "FreeFireNormal" : "FreeFireMax")
                     .resizable()
                     .scaledToFill()
-                    .frame(width: 40, height: 40)
+                    .frame(width: 44, height: 44)
                     .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
                 Text(game == .freeFire ? "Free Fire" : "Free Fire MAX")
                     .font(.subheadline.weight(.semibold))
