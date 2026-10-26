@@ -108,6 +108,17 @@ struct ExternalSystemShellView: View {
         .preferredColorScheme(.dark)
         .animation(motion, value: route)
         .animation(motion, value: showAnnouncement)
+        .patchStorePresentation(patchStore)
+        .alert(item: Binding(
+            get: { patchStore.alert },
+            set: { patchStore.alert = $0 }
+        )) { alert in
+            Alert(
+                title: Text(alert.titleKey == "common.done" ? "Patch" : "Erro"),
+                message: Text(alert.messageArgument ?? alert.messageKey),
+                dismissButton: .default(Text("OK"))
+            )
+        }
         .task {
             remoteConfig.start()
             await remoteConfig.refresh()
@@ -227,7 +238,6 @@ private struct ExerDashboardView: View {
             Color.black.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                // Top bar
                 HStack {
                     Text("EXTERNAL SYSTEM")
                         .font(.system(size: 17, weight: .black, design: .rounded))
@@ -245,7 +255,6 @@ private struct ExerDashboardView: View {
                 .padding(.top, 8)
                 .padding(.bottom, 12)
 
-                // Game pills
                 HStack(spacing: 10) {
                     gamePill("Free Fire", selectedGame == .freeFire) {
                         withAnimation(.easeInOut(duration: 0.18)) { selectedGame = .freeFire }
@@ -257,7 +266,6 @@ private struct ExerDashboardView: View {
                 .padding(.horizontal, 16)
                 .padding(.bottom, 14)
 
-                // Content
                 ScrollView(showsIndicators: false) {
                     Group {
                         switch selectedTab {
@@ -292,7 +300,7 @@ private struct ExerDashboardView: View {
     }
 }
 
-// MARK: - Bottom Bar (Home / Skin / External)
+// MARK: - Bottom Bar
 
 private struct ExerBottomBar: View {
     @Binding var selectedTab: ExerTab
@@ -326,7 +334,7 @@ private struct ExerBottomBar: View {
     }
 }
 
-// MARK: - HOME (checkbox style — apply/restore like Skin)
+// MARK: - HOME
 
 private struct ExerHomeTab: View {
     @EnvironmentObject private var patchStore: PatchProjectStore
@@ -382,16 +390,6 @@ private struct ExerHomeTab: View {
         }
         .onChange(of: patchStore.items.map(\.id)) { _ in
             refreshTick += 1
-        }
-        .alert(item: Binding(
-            get: { patchStore.alert },
-            set: { patchStore.alert = $0 }
-        )) { alert in
-            Alert(
-                title: Text("Patch"),
-                message: Text(alert.messageArgument ?? alert.messageKey),
-                dismissButton: .default(Text("OK"))
-            )
         }
     }
 
@@ -519,6 +517,8 @@ private struct ExerSkinTab: View {
                             withAnimation(.easeInOut(duration: 0.15)) {
                                 if isApplied(item) {
                                     patchStore.restoreInline(item)
+                                } else if item.isLocked {
+                                    patchStore.requestUnlock(for: item)
                                 } else {
                                     patchStore.applyInline(item)
                                 }
@@ -557,7 +557,11 @@ private struct ExerSkinTab: View {
 
             Button {
                 if let item = skinItems.first(where: { !isApplied($0) }) {
-                    patchStore.applyInline(item)
+                    if item.isLocked {
+                        patchStore.requestUnlock(for: item)
+                    } else {
+                        patchStore.applyInline(item)
+                    }
                 }
             } label: {
                 Text("INJECT")
@@ -607,7 +611,7 @@ private struct ExerSkinTab: View {
     }
 }
 
-// MARK: - EXTERNAL TAB (original panel restored)
+// MARK: - EXTERNAL TAB
 
 private struct ExerExternalTab: View {
     @EnvironmentObject private var patchStore: PatchProjectStore
