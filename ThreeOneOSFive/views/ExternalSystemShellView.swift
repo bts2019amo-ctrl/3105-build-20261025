@@ -76,7 +76,7 @@ struct ExternalSystemShellView: View {
                             Image(systemName: "wrench.and.screwdriver.fill")
                                 .font(.system(size: 34, weight: .bold))
                                 .foregroundStyle(.white)
-                            Text(verbatim: remoteConfig.config.maintenance.title.isEmpty ? "Em manuten\u{00e7}\u{00e3}o" : remoteConfig.config.maintenance.title)
+                            Text(remoteConfig.config.maintenance.title.isEmpty ? "Em manutenção" : remoteConfig.config.maintenance.title)
                                 .font(.title2.weight(.bold))
                                 .foregroundStyle(.white)
                             Text(remoteConfig.config.maintenance.message)
@@ -94,7 +94,7 @@ struct ExternalSystemShellView: View {
                         VStack(spacing: 10) {
                             Image(systemName: "eye.slash.fill")
                                 .font(.system(size: 28, weight: .bold))
-                            Text(isVietnamese ? "Conte\u{00fa}do protegido" : "Protected content")
+                            Text(isVietnamese ? "Conteúdo protegido" : "Protected content")
                                 .font(.headline.weight(.bold))
                         }
                         .foregroundStyle(.white)
@@ -138,8 +138,11 @@ struct ExternalSystemShellView: View {
     }
 }
 
+// MARK: - Tabs (Home / Skin / External only)
+
 private enum ExerTab: Hashable {
     case home, skin, external
+
     var title: String {
         switch self {
         case .home: return "Home"
@@ -147,6 +150,7 @@ private enum ExerTab: Hashable {
         case .external: return "External"
         }
     }
+
     var icon: String {
         switch self {
         case .home: return "house.fill"
@@ -174,8 +178,17 @@ struct DeltaPalette {
     let muted: Color
     let card: Color
     let line: Color
+
     static func make(_ theme: DeltaTheme, darkMode: Bool) -> DeltaPalette {
-        DeltaPalette(primary: .white, dark: Color(white: 0.15), page: .black, ink: .white.opacity(0.96), muted: .white.opacity(0.45), card: Color(red: 0.11, green: 0.11, blue: 0.12), line: .white.opacity(0.10))
+        DeltaPalette(
+            primary: .white,
+            dark: Color(white: 0.15),
+            page: .black,
+            ink: .white.opacity(0.96),
+            muted: .white.opacity(0.45),
+            card: Color(red: 0.11, green: 0.11, blue: 0.12),
+            line: .white.opacity(0.10)
+        )
     }
 }
 
@@ -195,6 +208,8 @@ enum DeltaColors {
     static var isDark: Bool { true }
 }
 
+// MARK: - Dashboard
+
 private struct ExerDashboardView: View {
     @Binding var selectedGame: DeltaGame
     @Binding var selectedTab: ExerTab
@@ -210,7 +225,9 @@ private struct ExerDashboardView: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             Color.black.ignoresSafeArea()
+
             VStack(spacing: 0) {
+                // Top bar
                 HStack {
                     Text("EXTERNAL SYSTEM")
                         .font(.system(size: 17, weight: .black, design: .rounded))
@@ -219,29 +236,44 @@ private struct ExerDashboardView: View {
                     Spacer()
                     HStack(spacing: 5) {
                         Circle().fill(Color.red).frame(width: 7, height: 7)
-                        Text("LIVE").font(.system(size: 11, weight: .bold)).foregroundStyle(.white.opacity(0.85))
+                        Text("LIVE")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.white.opacity(0.85))
                     }
                 }
-                .padding(.horizontal, 18).padding(.top, 8).padding(.bottom, 12)
+                .padding(.horizontal, 18)
+                .padding(.top, 8)
+                .padding(.bottom, 12)
 
+                // Game pills
                 HStack(spacing: 10) {
-                    gamePill("Free Fire", selectedGame == .freeFire) { withAnimation(.easeInOut(duration: 0.18)) { selectedGame = .freeFire } }
-                    gamePill("FF Max", selectedGame == .freeFireMax) { withAnimation(.easeInOut(duration: 0.18)) { selectedGame = .freeFireMax } }
+                    gamePill("Free Fire", selectedGame == .freeFire) {
+                        withAnimation(.easeInOut(duration: 0.18)) { selectedGame = .freeFire }
+                    }
+                    gamePill("FF Max", selectedGame == .freeFireMax) {
+                        withAnimation(.easeInOut(duration: 0.18)) { selectedGame = .freeFireMax }
+                    }
                 }
-                .padding(.horizontal, 16).padding(.bottom, 14)
+                .padding(.horizontal, 16)
+                .padding(.bottom, 14)
 
+                // Content
                 ScrollView(showsIndicators: false) {
                     Group {
                         switch selectedTab {
-                        case .home: ExerHomeTab(selectedGame: selectedGame)
-                        case .skin: ExerSkinTab(selectedGame: selectedGame)
-                        case .external: ExerExternalTab(selectedGame: selectedGame)
+                        case .home:
+                            ExerHomeTab(selectedGame: selectedGame)
+                        case .skin:
+                            ExerSkinTab(selectedGame: selectedGame)
+                        case .external:
+                            ExerExternalTab(selectedGame: selectedGame)
                         }
                     }
                     .padding(.horizontal, 16)
                     .padding(.bottom, 110)
                 }
             }
+
             ExerBottomBar(selectedTab: $selectedTab)
         }
         .preferredColorScheme(.dark)
@@ -260,9 +292,12 @@ private struct ExerDashboardView: View {
     }
 }
 
+// MARK: - Bottom Bar (Home / Skin / External)
+
 private struct ExerBottomBar: View {
     @Binding var selectedTab: ExerTab
     private let tabs: [ExerTab] = [.home, .skin, .external]
+
     var body: some View {
         HStack(spacing: 0) {
             ForEach(tabs, id: \.self) { tab in
@@ -272,7 +307,8 @@ private struct ExerBottomBar: View {
                     VStack(spacing: 4) {
                         Image(systemName: tab.icon)
                             .font(.system(size: 18, weight: selectedTab == tab ? .semibold : .regular))
-                        Text(tab.title).font(.system(size: 10, weight: .medium))
+                        Text(tab.title)
+                            .font(.system(size: 10, weight: .medium))
                     }
                     .foregroundStyle(selectedTab == tab ? .white : .white.opacity(0.38))
                     .frame(maxWidth: .infinity)
@@ -290,9 +326,12 @@ private struct ExerBottomBar: View {
     }
 }
 
+// MARK: - HOME (checkbox style like video)
+
 private struct ExerHomeTab: View {
     @EnvironmentObject private var patchStore: PatchProjectStore
     let selectedGame: DeltaGame
+    @State private var onIDs: Set<UUID> = []
 
     private var cacheItems: [PatchLibraryItem] { items(for: .cache) }
     private var avatarItems: [PatchLibraryItem] { items(for: .avatar) }
@@ -305,20 +344,24 @@ private struct ExerHomeTab: View {
         }
     }
 
-    private func isApplied(_ item: PatchLibraryItem) -> Bool {
+    private func hasReceipt(_ item: PatchLibraryItem) -> Bool {
         DevicePatchService.latestReceipt(projectID: item.id) != nil
+    }
+
+    private func syncFromReceipts() {
+        onIDs = Set((cacheItems + avatarItems).filter(hasReceipt).map(\.id))
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             VStack(alignment: .leading, spacing: 5) {
-                Text(selectedGame == .freeFire ? "FREE FIRE \u{00b7} READY" : "FREE FIRE MAX \u{00b7} READY")
+                Text(selectedGame == .freeFire ? "FREE FIRE · READY" : "FREE FIRE MAX · READY")
                     .font(.system(size: 11, weight: .bold))
                     .foregroundStyle(.white.opacity(0.40))
                 Text("Choose option")
                     .font(.system(size: 20, weight: .bold))
                     .foregroundStyle(.white)
-                Text("No option selected")
+                Text(onIDs.isEmpty ? "No option selected" : "\(onIDs.count) active")
                     .font(.system(size: 13))
                     .foregroundStyle(.white.opacity(0.35))
             }
@@ -333,6 +376,21 @@ private struct ExerHomeTab: View {
             optionList(items: avatarItems)
         }
         .padding(.top, 2)
+        .onAppear { syncFromReceipts() }
+        .onChange(of: patchStore.items.map(\.id)) { _ in syncFromReceipts() }
+        .onChange(of: patchStore.isBusy) { busy in
+            if !busy { syncFromReceipts() }
+        }
+        .alert(item: Binding(
+            get: { patchStore.alert },
+            set: { patchStore.alert = $0 }
+        )) { alert in
+            Alert(
+                title: Text("Patch"),
+                message: Text(alert.messageArgument ?? alert.messageKey),
+                dismissButton: .default(Text("OK"))
+            )
+        }
     }
 
     private func sectionLabel(_ text: String) -> some View {
@@ -347,7 +405,7 @@ private struct ExerHomeTab: View {
     private func optionList(items: [PatchLibraryItem]) -> some View {
         VStack(spacing: 8) {
             if items.isEmpty {
-                Text("Nenhum item dispon\u{00ed}vel")
+                Text("Nenhum item disponível")
                     .font(.system(size: 14))
                     .foregroundStyle(.white.opacity(0.30))
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -357,47 +415,59 @@ private struct ExerHomeTab: View {
                 ForEach(items, id: \.id) { item in
                     checkboxRow(
                         title: PatchProjectLibrary.displayName(for: item),
-                        isOn: isApplied(item)
+                        isOn: onIDs.contains(item.id)
                     ) {
-                        if isApplied(item) {
-                            patchStore.restoreInline(item)
-                        } else {
-                            patchStore.applyInline(item)
-                        }
+                        toggle(item)
                     }
                 }
             }
         }
     }
 
-    private func checkboxRow(title: String, isOn: Bool, action: @escaping () -> Void) -> some View {
-        HStack(spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .stroke(isOn ? Color.white : Color.white.opacity(0.28), lineWidth: 1.6)
-                    .frame(width: 22, height: 22)
-                if isOn {
-                    RoundedRectangle(cornerRadius: 4, style: .continuous)
-                        .fill(Color.white)
-                        .frame(width: 14, height: 14)
-                }
+    private func toggle(_ item: PatchLibraryItem) {
+        if onIDs.contains(item.id) {
+            onIDs.remove(item.id)
+            patchStore.restoreInline(item)
+        } else {
+            onIDs.insert(item.id)
+            if item.isLocked {
+                patchStore.requestUnlock(for: item)
+            } else {
+                patchStore.applyInline(item)
             }
-            Text(title)
-                .font(.system(size: 14.5, weight: .medium))
-                .foregroundStyle(.white.opacity(0.92))
-                .lineLimit(1)
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(white: 0.09), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .contentShape(Rectangle())
-        .onTapGesture {
-            action()
         }
     }
+
+    private func checkboxRow(title: String, isOn: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .stroke(isOn ? Color.white : Color.white.opacity(0.55), lineWidth: 1.8)
+                        .frame(width: 22, height: 22)
+                    if isOn {
+                        RoundedRectangle(cornerRadius: 3, style: .continuous)
+                            .fill(Color.white)
+                            .frame(width: 14, height: 14)
+                    }
+                }
+                Text(title)
+                    .font(.system(size: 14.5, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.92))
+                    .lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
+            .background(Color(white: 0.09), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
 }
+
+// MARK: - SKIN TAB
 
 private struct ExerSkinTab: View {
     @EnvironmentObject private var patchStore: PatchProjectStore
@@ -430,7 +500,7 @@ private struct ExerSkinTab: View {
 
             VStack(spacing: 8) {
                 if skinItems.isEmpty {
-                    Text("Nenhuma skin dispon\u{00ed}vel")
+                    Text("Nenhuma skin disponível")
                         .font(.system(size: 14))
                         .foregroundStyle(.white.opacity(0.30))
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -438,47 +508,55 @@ private struct ExerSkinTab: View {
                         .background(Color(white: 0.09), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 } else {
                     ForEach(skinItems, id: \.id) { item in
-                        HStack(spacing: 12) {
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .fill(Color(white: 0.14))
-                                .frame(width: 42, height: 42)
-                                .overlay {
-                                    Image(systemName: "tshirt.fill")
-                                        .font(.system(size: 15))
-                                        .foregroundStyle(.white.opacity(0.45))
-                                }
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(PatchProjectLibrary.displayName(for: item))
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundStyle(.white)
-                                    .lineLimit(1)
-                                Text("\(selectedCharacter) \u{00b7} Free Fire")
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(.white.opacity(0.38))
-                            }
-                            Spacer()
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                                    .stroke(isApplied(item) ? Color.white : Color.white.opacity(0.28), lineWidth: 1.6)
-                                    .frame(width: 22, height: 22)
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.15)) {
                                 if isApplied(item) {
-                                    RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                        .fill(Color.white)
-                                        .frame(width: 14, height: 14)
+                                    patchStore.restoreInline(item)
+                                } else {
+                                    patchStore.applyInline(item)
                                 }
                             }
-                        }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 12)
-                        .background(Color(white: 0.09), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            if isApplied(item) {
-                                patchStore.restoreInline(item)
-                            } else {
-                                patchStore.applyInline(item)
+                        } label: {
+                            HStack(spacing: 12) {
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .fill(Color(white: 0.14))
+                                    .frame(width: 42, height: 42)
+                                    .overlay {
+                                        Image(systemName: "tshirt.fill")
+                                            .font(.system(size: 15))
+                                            .foregroundStyle(.white.opacity(0.45))
+                                    }
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(PatchProjectLibrary.displayName(for: item))
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundStyle(.white)
+                                        .lineLimit(1)
+                                    Text("\(selectedCharacter) · Free Fire")
+                                        .font(.system(size: 11))
+                                        .foregroundStyle(.white.opacity(0.38))
+                                }
+
+                                Spacer()
+
+                                // Square checkbox
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                        .stroke(isApplied(item) ? Color.white : Color.white.opacity(0.28), lineWidth: 1.6)
+                                        .frame(width: 22, height: 22)
+                                    if isApplied(item) {
+                                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                            .fill(Color.white)
+                                            .frame(width: 14, height: 14)
+                                    }
+                                }
                             }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .background(Color(white: 0.09), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .contentShape(Rectangle())
                         }
+                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -534,7 +612,8 @@ private struct ExerSkinTab: View {
     }
 }
 
-// ORIGINAL External panel restored
+// MARK: - EXTERNAL TAB (original panel restored)
+
 private struct ExerExternalTab: View {
     @EnvironmentObject private var patchStore: PatchProjectStore
     let selectedGame: DeltaGame
@@ -570,6 +649,8 @@ private struct ExerExternalTab: View {
     }
 }
 
+// MARK: - Splash / Selector / Announcement
+
 private struct DeltaSplashView: View {
     let brandName: String
     let subtitle: String
@@ -596,11 +677,16 @@ private struct DeltaSplashView: View {
                         .scaleEffect(pulse ? 1.06 : 0.94)
                         .shadow(color: .white.opacity(0.15), radius: pulse ? 20 : 8)
                 }
+
                 Text(brandName)
                     .font(.system(size: 22, weight: .black, design: .rounded))
                     .tracking(1.4)
                     .foregroundStyle(.white)
-                ProgressView().tint(.white).scaleEffect(1.2)
+
+                ProgressView()
+                    .tint(.white)
+                    .scaleEffect(1.2)
+
                 Text(subtitle.isEmpty ? "Initializing EXTERNAL SYSTEM..." : subtitle)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.white.opacity(0.45))
@@ -609,7 +695,9 @@ private struct DeltaSplashView: View {
             .onAppear {
                 withAnimation(.easeOut(duration: 0.6)) { opacity = 1 }
                 guard !reduceMotion else { return }
-                withAnimation(.easeInOut(duration: 1.15).repeatForever(autoreverses: true)) { pulse = true }
+                withAnimation(.easeInOut(duration: 1.15).repeatForever(autoreverses: true)) {
+                    pulse = true
+                }
             }
         }
     }
@@ -633,11 +721,14 @@ private struct DeltaGameSelectorView: View {
                     .foregroundStyle(.white)
                     .opacity(appear ? 1 : 0)
                     .offset(y: appear ? 0 : 12)
-                Text(isVietnamese ? "Ch\u{1ecd}n game" : "Select target game")
+
+                Text(isVietnamese ? "Chọn game" : "Select target game")
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.45))
-                    .padding(.top, 8).padding(.bottom, 32)
+                    .padding(.top, 8)
+                    .padding(.bottom, 32)
                     .opacity(appear ? 1 : 0)
+
                 VStack(spacing: 12) {
                     gameRow(.freeFire)
                     gameRow(.freeFireMax)
@@ -645,8 +736,9 @@ private struct DeltaGameSelectorView: View {
                 .padding(.horizontal, 24)
                 .opacity(appear ? 1 : 0)
                 .offset(y: appear ? 0 : 16)
+
                 Button(action: onEnter) {
-                    Text(isVietnamese ? "V\u{00c0}O" : "ENTER")
+                    Text(isVietnamese ? "VÀO" : "ENTER")
                         .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(.black)
                         .frame(maxWidth: .infinity)
@@ -654,12 +746,16 @@ private struct DeltaGameSelectorView: View {
                         .background(Color.white, in: Capsule())
                 }
                 .buttonStyle(.plain)
-                .padding(.horizontal, 24).padding(.top, 28)
+                .padding(.horizontal, 24)
+                .padding(.top, 28)
                 .opacity(appear ? 1 : 0)
+
                 Spacer()
             }
         }
-        .onAppear { withAnimation(.easeOut(duration: 0.55)) { appear = true } }
+        .onAppear {
+            withAnimation(.easeOut(duration: 0.55)) { appear = true }
+        }
     }
 
     private func gameRow(_ game: DeltaGame) -> some View {
@@ -668,7 +764,8 @@ private struct DeltaGameSelectorView: View {
         } label: {
             HStack {
                 Image(game == .freeFire ? "FreeFireNormal" : "FreeFireMax")
-                    .resizable().scaledToFill()
+                    .resizable()
+                    .scaledToFill()
                     .frame(width: 40, height: 40)
                     .clipShape(RoundedRectangle(cornerRadius: 9, style: .continuous))
                 Text(game == .freeFire ? "Free Fire" : "Free Fire MAX")
@@ -709,12 +806,12 @@ private struct DeltaAnnouncementView: View {
                 Text(config.brandName.isEmpty ? "EXTERNAL SYSTEM" : config.brandName)
                     .font(.system(size: 22, weight: .black))
                     .foregroundStyle(.white)
-                Text(verbatim: config.announcement.message.isEmpty ? (isVietnamese ? "Ch\u{00e0}o m\u{1eeb}ng!" : "Welcome!") : config.announcement.message)
+                Text(config.announcement.message.isEmpty ? (isVietnamese ? "Chào mừng!" : "Welcome!") : config.announcement.message)
                     .font(.subheadline)
                     .foregroundStyle(.white.opacity(0.7))
                     .multilineTextAlignment(.center)
                 Button(action: dismiss) {
-                    Text(isVietnamese ? "Ti\u{1ebf}p t\u{1ee5}c" : "Continue")
+                    Text(isVietnamese ? "Tiếp tục" : "Continue")
                         .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(.black)
                         .frame(maxWidth: .infinity)
